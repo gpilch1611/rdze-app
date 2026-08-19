@@ -308,6 +308,8 @@ function App() {
             streak={streak}
             kegelDone={kegelDone}
             breathingTotal={breathingTotal}
+            breathLevel={breathLevel}
+            breathNext={breathNext}
             onKegel={() => setKegelOpen(true)}
             onBreathing={() => setBreathingOpen(true)}
             onGrounding={() => setGroundingOpen(true)}
@@ -425,6 +427,8 @@ function TodayView({
   streak,
   kegelDone,
   breathingTotal,
+  breathLevel,
+  breathNext,
   onKegel,
   onBreathing,
   onGrounding,
@@ -435,6 +439,8 @@ function TodayView({
   streak: number;
   kegelDone: boolean;
   breathingTotal: number;
+  breathLevel: number;
+  breathNext: number;
   onKegel: () => void;
   onBreathing: () => void;
   onGrounding: () => void;
@@ -552,18 +558,18 @@ function TodayView({
             </button>
           </div>
           <div className="progress-row">
-            <div className="level-badge">2</div>
+            <div className="level-badge">{breathLevel}</div>
             <div className="progress-main">
               <div className="progress-meta">
-                <strong>{pick(BREATH_NAMES[1], lang)}</strong>
+                <strong>{pick(BREATH_NAMES[breathLevel - 1], lang)}</strong>
                 <span>
-                  {breathingTotal} / 180 {t.minTotal}
+                  {breathingTotal} / {breathNext} {t.minTotal}
                 </span>
               </div>
               <div className="progress-track">
                 <span
                   style={{
-                    width: `${Math.min(100, Math.max(8, (breathingTotal / 180) * 100))}%`,
+                    width: `${Math.min(100, Math.max(8, (breathingTotal / breathNext) * 100))}%`,
                   }}
                 />
               </div>
