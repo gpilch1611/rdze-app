@@ -162,6 +162,7 @@ function App() {
     Math.round(((breathingTotal - breathPrevious) / (breathNext - breathPrevious)) * 100),
   );
   const kegelDone = todaysSessions.some((session) => session.type === 'kegel');
+  const breathingDone = todaysSessions.some((session) => session.type === 'breathing');
 
   const addSession = (session: Session) =>
     setData((current) => ({ ...current, sessions: [...current.sessions, session] }));
@@ -307,6 +308,7 @@ function App() {
             lang={lang}
             streak={streak}
             kegelDone={kegelDone}
+            breathingDone={breathingDone}
             breathingTotal={breathingTotal}
             breathLevel={breathLevel}
             breathNext={breathNext}
@@ -426,6 +428,7 @@ function TodayView({
   lang,
   streak,
   kegelDone,
+  breathingDone,
   breathingTotal,
   breathLevel,
   breathNext,
@@ -438,6 +441,7 @@ function TodayView({
   lang: Lang;
   streak: number;
   kegelDone: boolean;
+  breathingDone: boolean;
   breathingTotal: number;
   breathLevel: number;
   breathNext: number;
@@ -505,7 +509,7 @@ function TodayView({
           <h3>{t.yourSet}</h3>
         </div>
         <span className="completion">
-          {kegelDone ? '1' : '0'} / 2 {t.completed}
+          {(kegelDone ? 1 : 0) + (breathingDone ? 1 : 0)} / 2 {t.completed}
         </span>
       </div>
 
@@ -526,7 +530,7 @@ function TodayView({
           title={t.breath}
           subtitle={t.breathSub}
           detail={t.breathDetail}
-          done={false}
+          done={breathingDone}
           onClick={onBreathing}
           t={t}
         />
