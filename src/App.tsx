@@ -19,6 +19,7 @@ import {
   RotateCw,
   ShieldCheck,
   Sparkles,
+  Sun,
   Timer,
   Wind,
   X,
@@ -37,6 +38,7 @@ import {
 import { loadData as loadFromDB, saveData as saveToDB } from './storage';
 
 type View = 'today' | 'progress' | 'journal';
+type Theme = 'dark' | 'light';
 type KegelMode = 'normal' | 'reverse';
 type Session = {
   type: 'kegel' | 'breathing';
@@ -67,6 +69,15 @@ function loadLang(): Lang {
   return saved === 'en' ? 'en' : 'pl';
 }
 
+function loadTheme(): Theme {
+  const saved = localStorage.getItem('rdzen-theme');
+  if (saved === 'light' || saved === 'dark') return saved;
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+    return 'light';
+  }
+  return 'dark';
+}
+
 function vibrate(pattern: number | number[]) {
   if (navigator.vibrate) {
     try {
@@ -80,6 +91,7 @@ function vibrate(pattern: number | number[]) {
 function App() {
   const [view, setView] = useState<View>('today');
   const [lang, setLang] = useState<Lang>(loadLang);
+  const [theme, setTheme] = useState<Theme>(loadTheme);
   const [data, setData] = useState<StoredData>(EMPTY_DATA);
   const [breathingOpen, setBreathingOpen] = useState(false);
   const [kegelOpen, setKegelOpen] = useState(false);
@@ -98,6 +110,11 @@ function App() {
   }, []);
   useEffect(() => { saveToDB(data); }, [data]);
   useEffect(() => localStorage.setItem('rdzen-lang', lang), [lang]);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('rdzen-theme', theme);
+  }, [theme]);
+  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
 
   const todaysSessions = data.sessions.filter((session) => session.date === todayKey);
   const breathingTotal = data.sessions.reduce(
@@ -255,14 +272,23 @@ function App() {
               {view === 'today' ? t.today : view === 'progress' ? t.progress : t.journal}
             </h1>
           </div>
-          <button
-            className="icon-button notification"
-            aria-label={t.notifications}
-            onClick={enableNotifications}
-          >
-            <Bell size={19} />
-            {notifEnabled && <i />}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button
+              className="icon-button notification"
+              aria-label={t.notifications}
+              onClick={enableNotifications}
+            >
+              <Bell size={19} />
+              {notifEnabled && <i />}
+            </button>
+            <button
+              className="theme-toggle"
+              aria-label={theme === 'dark' ? t.lightMode : t.darkMode}
+              onClick={toggleTheme}
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+          </div>
         </header>
 
         {view === 'today' && (

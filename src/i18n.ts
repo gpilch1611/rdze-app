@@ -117,6 +117,8 @@ export type Dict = {
   openMenu: string;
   notifications: string;
   mondayAug: string;
+  lightMode: string;
+  darkMode: string;
 };
 
 export const translations: Record<Lang, Dict> = {
@@ -233,6 +235,8 @@ export const translations: Record<Lang, Dict> = {
     openMenu: 'Otwórz menu',
     notifications: 'Powiadomienia',
     mondayAug: 'Poniedziałek, 18 sierpnia',
+    lightMode: 'Przełącz na jasny motyw',
+    darkMode: 'Przełącz na ciemny motyw',
   },
   en: {
     brand: 'core',
@@ -347,6 +351,8 @@ export const translations: Record<Lang, Dict> = {
     openMenu: 'Open menu',
     notifications: 'Notifications',
     mondayAug: 'Monday, August 18',
+    lightMode: 'Switch to light mode',
+    darkMode: 'Switch to dark mode',
   },
 };
 
