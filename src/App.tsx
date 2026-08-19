@@ -62,6 +62,16 @@ type StoredData = {
 
 const todayKey = new Date().toISOString().slice(0, 10);
 
+function formatTodayDate(lang: Lang): string {
+  const locale = lang === 'pl' ? 'pl-PL' : 'en-US';
+  const formatted = new Intl.DateTimeFormat(locale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date());
+  return lang === 'pl' ? formatted.charAt(0).toUpperCase() + formatted.slice(1) : formatted;
+}
+
 const EMPTY_DATA: StoredData = { sessions: [], journal: [] };
 
 function loadLang(): Lang {
@@ -267,7 +277,7 @@ function App() {
             <Menu size={22} />
           </button>
           <div className="topbar-context">
-            <span className="eyebrow">{t.mondayAug}</span>
+            <span className="eyebrow">{formatTodayDate(lang)}</span>
             <h1>
               {view === 'today' ? t.today : view === 'progress' ? t.progress : t.journal}
             </h1>
