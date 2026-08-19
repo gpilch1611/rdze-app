@@ -1332,7 +1332,11 @@ function BreathingModal({
   );
 }
 
+const GROUNDING_BREATH_SECONDS = 30;
+
 function GroundingModal({ t, onClose }: { t: Dict; onClose: () => void }) {
+  const [phase, setPhase] = useState<'breath' | 'steps'>('breath');
+  const [breathSeconds, setBreathSeconds] = useState(0);
   const [step, setStep] = useState(0);
   const steps = [t.see, t.touch, t.hear, t.smell, t.taste];
   const icons = [Sparkles, Hand, Activity, Wind, HeartPulse];
@@ -1340,8 +1344,25 @@ function GroundingModal({ t, onClose }: { t: Dict; onClose: () => void }) {
   const Icon = icons[step];
 
   useEffect(() => {
+    if (phase !== 'breath') return;
+    const interval = window.setInterval(() => setBreathSeconds((s) => s + 1), 1000);
+    return () => window.clearInterval(interval);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase === 'breath' && breathSeconds >= GROUNDING_BREATH_SECONDS) setPhase('steps');
+  }, [breathSeconds, phase]);
+
+  useEffect(() => {
+    if (phase === 'breath' && breathSeconds > 0 && breathSeconds % 10 === 0) vibrate(20);
+  }, [phase, breathSeconds]);
+
+  useEffect(() => {
     if (step > 0) vibrate(25);
   }, [step]);
+
+  const breathPhase = breathSeconds % 10 < 4 ? 'inhale' : 'exhale';
+  const breathPhaseSeconds = breathSeconds % 10 < 4 ? 4 - (breathSeconds % 10) : 10 - (breathSeconds % 10);
 
   return (
     <div className="modal-backdrop">
@@ -1349,33 +1370,52 @@ function GroundingModal({ t, onClose }: { t: Dict; onClose: () => void }) {
         <button className="close-button" onClick={onClose}>
           <X size={19} />
         </button>
-        <span className="eyebrow">{t.grounding}</span>
-        <h2>{t.groundingIntro}</h2>
-        <div className="grounding-step">
-          <div className="grounding-icon">
-            <Icon size={36} />
-          </div>
-          <strong>{steps[step]}</strong>
-          <div className="rep-dots">
-            {steps.map((_, i) => (
-              <i key={i} className={i <= step ? 'filled' : ''} />
-            ))}
-          </div>
-        </div>
-        <button
-          className="primary-button full"
-          onClick={() => (isLast ? onClose() : setStep(step + 1))}
-        >
-          {isLast ? (
-            <>
-              <Check size={17} /> {t.finishGrounding}
-            </>
-          ) : (
-            <>
-              {t.start} <ArrowRight size={17} />
-            </>
-          )}
-        </button>
+        {phase === 'breath' ? (
+          <>
+            <span className="eyebrow">{t.grounding}</span>
+            <h2>{breathPhase === 'inhale' ? t.inhale : t.exhale}</h2>
+            <div className={`breath-circle ${breathPhase}`}>
+              <div>
+                <strong>{breathPhaseSeconds}</strong>
+                <span>{t.sec}</span>
+              </div>
+            </div>
+            <p className="breath-tip">{t.groundingBreathIntro}</p>
+            <button className="ghost-button full" onClick={() => setPhase('steps')}>
+              {t.skipBreath} <ArrowRight size={16} />
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="eyebrow">{t.grounding}</span>
+            <h2>{t.groundingIntro}</h2>
+            <div className="grounding-step">
+              <div className="grounding-icon">
+                <Icon size={36} />
+              </div>
+              <strong>{steps[step]}</strong>
+              <div className="rep-dots">
+                {steps.map((_, i) => (
+                  <i key={i} className={i <= step ? 'filled' : ''} />
+                ))}
+              </div>
+            </div>
+            <button
+              className="primary-button full"
+              onClick={() => (isLast ? onClose() : setStep(step + 1))}
+            >
+              {isLast ? (
+                <>
+                  <Check size={17} /> {t.finishGrounding}
+                </>
+              ) : (
+                <>
+                  {t.start} <ArrowRight size={17} />
+                </>
+              )}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

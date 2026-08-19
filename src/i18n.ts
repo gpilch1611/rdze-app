@@ -111,6 +111,8 @@ export type Dict = {
   notifSunday: string;
   notifLevelUp: string;
   levelUpToastTitle: string;
+  groundingBreathIntro: string;
+  skipBreath: string;
   enableNotifs: string;
   notifsEnabled: string;
   // misc
@@ -230,6 +232,8 @@ export const translations: Record<Lang, Dict> = {
     notifSunday: 'Podsumowanie tygodnia gotowe',
     notifLevelUp: 'Nowy poziom odblokowany',
     levelUpToastTitle: 'Nowy poziom!',
+    groundingBreathIntro: 'Zacznij od uspokojenia oddechu — dopiero potem przejdziemy do uziemienia.',
+    skipBreath: 'Przejdź do uziemienia',
     enableNotifs: 'Włącz powiadomienia',
     notifsEnabled: 'Powiadomienia włączone',
     language: 'Język',
@@ -346,6 +350,8 @@ export const translations: Record<Lang, Dict> = {
     notifSunday: 'Weekly summary is ready',
     notifLevelUp: 'New level unlocked',
     levelUpToastTitle: 'New level!',
+    groundingBreathIntro: "Start by settling your breath — then we'll move on to grounding.",
+    skipBreath: 'Skip to grounding',
     enableNotifs: 'Enable notifications',
     notifsEnabled: 'Notifications enabled',
     language: 'Language',
