@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   ArrowRight,
@@ -60,6 +60,78 @@ type StoredData = {
   journal: JournalEntry[];
 };
 
+type NotifSlot = 'morning' | 'day' | 'evening' | 'sunday';
+
+const NOTIF_TIMES: { slot: NotifSlot; hour: number; minute: number; sundayOnly?: boolean }[] = [
+  { slot: 'morning', hour: 7, minute: 0 },
+  { slot: 'day', hour: 13, minute: 0 },
+  { slot: 'evening', hour: 20, minute: 0 },
+  { slot: 'sunday', hour: 19, minute: 0, sundayOnly: true },
+];
+
+function notifTextFor(slot: NotifSlot, t: Dict): string {
+  if (slot === 'morning') return t.notifMorning;
+  if (slot === 'day') return t.notifDay;
+  if (slot === 'evening') return t.notifEvening;
+  return t.notifSunday;
+}
+
+function loadFiredLog(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem('rdzen-notif-fired') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function saveFiredLog(log: Record<string, string>) {
+  localStorage.setItem('rdzen-notif-fired', JSON.stringify(log));
+}
+
+// Wyswietla powiadomienie przez Service Worker (dziala nawet gdy karta jest
+// w tle na Androidzie), z fallbackiem do zwyklego Notification API.
+async function fireNotification(title: string) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, { tag: 'rdzen' });
+      return;
+    } catch {
+      // przechodzimy do fallbacku ponizej
+    }
+  }
+  try {
+    new Notification(title, { tag: 'rdzen' });
+  } catch {
+    // brak wsparcia w tej przegladarce - ciche pominiecie
+  }
+}
+
+// Best-effort: Periodic Background Sync pozwala niektorym przegladarkom
+// (gl. Chrome na Androidzie, dla zainstalowanej PWA) budzic Service Workera
+// cyklicznie w tle. To NIE gwarantuje precyzyjnych godzin ani dzialania na
+// kazdym urzadzeniu (np. iOS Safari tego nie wspiera) - to tylko dodatkowe
+// wzmocnienie glownego mechanizmu, ktorym jest sprawdzanie w App() ponizej.
+async function tryRegisterPeriodicSync() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const regAny = reg as ServiceWorkerRegistration & {
+      periodicSync?: { register: (tag: string, opts: { minInterval: number }) => Promise<void> };
+    };
+    if (!regAny.periodicSync) return;
+    const status = await (navigator as Navigator & {
+      permissions: { query: (opts: { name: string }) => Promise<{ state: string }> };
+    }).permissions.query({ name: 'periodic-background-sync' });
+    if (status.state === 'granted') {
+      await regAny.periodicSync.register('rdzen-notif-check', { minInterval: 60 * 60 * 1000 });
+    }
+  } catch {
+    // periodic background sync niedostepny - polegamy na sprawdzaniu w App()
+  }
+}
+
 const todayKey = new Date().toISOString().slice(0, 10);
 
 function formatTodayDate(lang: Lang): string {
@@ -107,7 +179,12 @@ function App() {
   const [kegelOpen, setKegelOpen] = useState(false);
   const [groundingOpen, setGroundingOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notifEnabled, setNotifEnabled] = useState(false);
+  const [notifEnabled, setNotifEnabled] = useState(
+    () => 'Notification' in window && Notification.permission === 'granted',
+  );
+  const [levelUpToast, setLevelUpToast] = useState<{ track: 'kegel' | 'breath'; level: number } | null>(
+    null,
+  );
 
   const t = translations[lang];
 
@@ -190,9 +267,74 @@ function App() {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
       setNotifEnabled(true);
-      new Notification(t.notifMorning, { tag: 'rdzen' });
+      tryRegisterPeriodicSync();
     }
   };
+
+  // Glowny mechanizm harmonogramu: dopoki appka jest otwarta (rowniez w tle
+  // karty przegladarki), co minute sprawdzamy czy nadeszla pora ktoregos ze
+  // slotow (rano/dzien/wieczor/niedziela) i nie zostal jeszcze dzisiaj
+  // wyslany. To dziala niezaleznie od wsparcia przegladarki dla Periodic
+  // Background Sync powyzej.
+  useEffect(() => {
+    if (!notifEnabled) return;
+    const check = () => {
+      const now = new Date();
+      const dateKey = now.toISOString().slice(0, 10);
+      const log = loadFiredLog();
+      let changed = false;
+      for (const slotDef of NOTIF_TIMES) {
+        if (slotDef.sundayOnly && now.getDay() !== 0) continue;
+        const scheduled = new Date(now);
+        scheduled.setHours(slotDef.hour, slotDef.minute, 0, 0);
+        const diffMin = (now.getTime() - scheduled.getTime()) / 60000;
+        const alreadyFired = log[slotDef.slot] === dateKey;
+        if (diffMin >= 0 && diffMin <= 90 && !alreadyFired) {
+          fireNotification(notifTextFor(slotDef.slot, t));
+          log[slotDef.slot] = dateKey;
+          changed = true;
+        }
+      }
+      if (changed) saveFiredLog(log);
+    };
+    check();
+    const interval = setInterval(check, 60000);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', check);
+    };
+  }, [notifEnabled, t]);
+
+  // Wykrywanie awansu poziomu (Kegiel i oddech osobno) — toast + wibracja +
+  // powiadomienie, jesli wlaczone. prevKegelLevel/prevBreathLevel zaczynaja
+  // jako null, zeby nie odpalic toastu przy pierwszym wczytaniu appki.
+  const prevKegelLevel = useRef<number | null>(null);
+  const prevBreathLevel = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (prevKegelLevel.current !== null && kegelLevel > prevKegelLevel.current) {
+      setLevelUpToast({ track: 'kegel', level: kegelLevel });
+      if (navigator.vibrate) navigator.vibrate([80, 40, 80, 40, 160]);
+      if (notifEnabled) fireNotification(t.notifLevelUp);
+    }
+    prevKegelLevel.current = kegelLevel;
+  }, [kegelLevel, notifEnabled, t]);
+
+  useEffect(() => {
+    if (prevBreathLevel.current !== null && breathLevel > prevBreathLevel.current) {
+      setLevelUpToast({ track: 'breath', level: breathLevel });
+      if (navigator.vibrate) navigator.vibrate([80, 40, 80, 40, 160]);
+      if (notifEnabled) fireNotification(t.notifLevelUp);
+    }
+    prevBreathLevel.current = breathLevel;
+  }, [breathLevel, notifEnabled, t]);
+
+  useEffect(() => {
+    if (!levelUpToast) return;
+    const timeout = setTimeout(() => setLevelUpToast(null), 6000);
+    return () => clearTimeout(timeout);
+  }, [levelUpToast]);
 
   return (
     <div className="app-shell">
@@ -364,6 +506,22 @@ function App() {
       )}
       {groundingOpen && (
         <GroundingModal t={t} onClose={() => setGroundingOpen(false)} />
+      )}
+      {levelUpToast && (
+        <div className="level-up-toast animate-in" role="status">
+          <div className="level-up-toast-badge">{levelUpToast.level}</div>
+          <div>
+            <strong>{t.levelUpToastTitle}</strong>
+            <span>
+              {pick(
+                levelUpToast.track === 'kegel'
+                  ? KEGEL_LEVELS[levelUpToast.level - 1]
+                  : BREATH_NAMES[levelUpToast.level - 1],
+                lang,
+              )}
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );

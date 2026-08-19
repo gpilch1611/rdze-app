@@ -110,6 +110,7 @@ export type Dict = {
   notifEvening: string;
   notifSunday: string;
   notifLevelUp: string;
+  levelUpToastTitle: string;
   enableNotifs: string;
   notifsEnabled: string;
   // misc
@@ -228,6 +229,7 @@ export const translations: Record<Lang, Dict> = {
     notifEvening: 'Wieczorna sesja czeka',
     notifSunday: 'Podsumowanie tygodnia gotowe',
     notifLevelUp: 'Nowy poziom odblokowany',
+    levelUpToastTitle: 'Nowy poziom!',
     enableNotifs: 'Włącz powiadomienia',
     notifsEnabled: 'Powiadomienia włączone',
     language: 'Język',
@@ -343,6 +345,7 @@ export const translations: Record<Lang, Dict> = {
     notifEvening: 'Evening session is waiting',
     notifSunday: 'Weekly summary is ready',
     notifLevelUp: 'New level unlocked',
+    levelUpToastTitle: 'New level!',
     enableNotifs: 'Enable notifications',
     notifsEnabled: 'Notifications enabled',
     language: 'Language',
