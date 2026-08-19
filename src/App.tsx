@@ -1129,7 +1129,10 @@ function KegelModal({
   const countdown = PHASE_LEN - (within % PHASE_LEN);
 
   const circleExpand = mode === 'normal' ? isSqueezePhase : !isSqueezePhase;
-  const actionLabel = isSqueezePhase ? t.squeeze : t.release;
+  // Etykieta tekstowa musi byc spojna z animacja kolka (circleExpand), nie z
+  // surowym timingiem fazy (isSqueezePhase) — inaczej w trybie 'reverse'
+  // kolko pokazuje rozluznienie, a tekst wciaz mowi "Napnij".
+  const actionLabel = circleExpand ? t.squeeze : t.release;
 
   return (
     <div className="modal-backdrop">
