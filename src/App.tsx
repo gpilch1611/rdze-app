@@ -197,7 +197,10 @@ function App() {
     return () => { active = false; };
   }, []);
   useEffect(() => { saveToDB(data); }, [data]);
-  useEffect(() => localStorage.setItem('rdzen-lang', lang), [lang]);
+  useEffect(() => {
+    localStorage.setItem('rdzen-lang', lang);
+    document.documentElement.setAttribute('lang', lang);
+  }, [lang]);
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('rdzen-theme', theme);
@@ -472,13 +475,11 @@ function App() {
             breathProgress={breathProgress}
             breathingTotal={breathingTotal}
             sessions={data.sessions}
-            journal={data.journal}
           />
         )}
         {view === 'journal' && (
           <JournalView
             t={t}
-            lang={lang}
             journal={data.journal}
             onSave={saveJournal}
           />
@@ -814,7 +815,6 @@ function ProgressView({
   breathProgress,
   breathingTotal,
   sessions,
-  journal,
 }: {
   t: Dict;
   lang: Lang;
@@ -825,9 +825,8 @@ function ProgressView({
   breathProgress: number;
   breathingTotal: number;
   sessions: Session[];
-  journal: JournalEntry[];
 }) {
-  const monthly = useMemo(() => computeMonthly(sessions, journal), [sessions, journal]);
+  const monthly = useMemo(() => computeMonthly(sessions, lang), [sessions, lang]);
   return (
     <div className="page animate-in">
       <div className="progress-intro">
@@ -944,12 +943,10 @@ function TrackCard({
 
 function JournalView({
   t,
-  lang,
   journal,
   onSave,
 }: {
   t: Dict;
-  lang: Lang;
   journal: JournalEntry[];
   onSave: (entry: JournalEntry) => void;
 }) {
@@ -1439,7 +1436,7 @@ function GroundingModal({ t, onClose }: { t: Dict; onClose: () => void }) {
 
 function computeMonthly(
   sessions: Session[],
-  journal: JournalEntry[],
+  lang: Lang,
 ): { label: string; streak: number; breath: number } {
   const now = new Date();
   const monthAgo = new Date(now.getTime() - 30 * 86400000);
@@ -1461,7 +1458,9 @@ function computeMonthly(
     .filter((s) => s.type === 'breathing' && s.date <= monthAgoKey)
     .reduce((sum, s) => sum + (s.minutes || 0), 0);
 
-  const monthLabel = monthAgo.toLocaleDateString('en', { month: 'short' });
+  const monthLabel = monthAgo.toLocaleDateString(lang === 'pl' ? 'pl-PL' : 'en-US', {
+    month: 'short',
+  });
   return { label: monthLabel, streak: oldStreak, breath: oldBreath };
 }
 

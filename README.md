@@ -6,7 +6,6 @@ Trening, oddech i świadoma progresja. PWA do treningu mięśni Kegla, oddechu i
 
 - Vite + React + TypeScript
 - Tailwind CSS
-- Supabase
 - IndexedDB (offline-first)
 
 ## Getting started
