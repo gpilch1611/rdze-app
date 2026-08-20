@@ -26,6 +26,7 @@ import {
   Zap,
 } from 'lucide-react';
 import {
+  BREATH_DESC,
   BREATH_LEVELS,
   BREATH_NAMES,
   KEGEL_DESC,
@@ -865,13 +866,7 @@ function ProgressView({
           typeLabel={`${t.track} ${t.breathLabel}`}
           level={breathLevel}
           name={pick(BREATH_NAMES[breathLevel - 1], lang)}
-          description={pick(
-            [
-              'Oddech staje się spokojniejszy z regularnością.',
-              'Breath grows calmer with regularity.',
-            ],
-            lang,
-          )}
+          description={pick(BREATH_DESC[breathLevel - 1], lang)}
           progress={breathProgress}
           accent="teal"
           meta={`${breathingTotal} ${t.minTotal}`}

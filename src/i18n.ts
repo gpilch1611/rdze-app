@@ -408,6 +408,18 @@ export const BREATH_NAMES: [string, string][] = [
   ['Spokój Absolutny', 'Absolute Calm'],
 ];
 
+export const BREATH_DESC: [string, string][] = [
+  ['Pierwsze minuty praktyki. Ciało dopiero uczy się rozpoznawać sygnał do zwolnienia.', 'The first minutes of practice. The body is just learning to recognize the signal to slow down.'],
+  ['Oddech zaczyna nabierać stałego rytmu, zamiast być przypadkowy.', 'Breathing starts to find a steady rhythm instead of being random.'],
+  ['Łatwiej Ci teraz wywołać spokój — reakcja jest szybsza niż na starcie.', "It's now easier to trigger calm — the response is faster than at the start."],
+  ['Organizm zaczyna kojarzyć długi wydech z realnym rozluźnieniem, nie tylko teorią.', 'The body starts associating a long exhale with real relaxation, not just theory.'],
+  ['Odporność na codzienny stres rośnie — mniejsze rzeczy przestają Cię rozstrajać.', 'Resilience to daily stress grows — smaller things stop throwing you off.'],
+  ['Wyciszenie przychodzi szybciej, nawet w trudniejszych momentach dnia.', 'Settling down happens faster, even in harder moments of the day.'],
+  ['Masz realne panowanie nad reakcją stresową, zanim eskaluje.', 'You have real command over the stress response before it escalates.'],
+  ['To już nawyk nerwowego układu, nie technika, o której trzeba pamiętać.', "It's a habit of the nervous system now, not a technique you have to remember."],
+  ['Pełny, trwały spokój jako punkt wyjścia, nie stan do wywalczenia.', 'Full, lasting calm as your baseline, not a state you have to fight for.'],
+];
+
 export function pick<T>(pair: [T, T], lang: Lang): T {
   return lang === 'pl' ? pair[0] : pair[1];
 }
