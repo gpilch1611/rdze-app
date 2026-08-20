@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101211" />
+    <meta name="description" content="Rdzeń — trening, oddech i świadoma progresja." />
+    <link rel="manifest" href="/rdze-app/manifest.json" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101211'/%3E%3Cpath d='M16 8c-3 5-5 7-5 10a5 5 0 0 0 10 0c0-3-2-5-5-10z' fill='%23d49a5c'/%3E%3C/svg%3E" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>rdzeń — Twój rytm</title>
+    <script type="module" crossorigin src="/rdze-app/assets/index-BD_i5AYE.js"></script>
+    <link rel="stylesheet" crossorigin href="/rdze-app/assets/index-C2SwqPY6.css">
+  </head>
+  <body>
+    <script>
+      (function () {
+        var saved = localStorage.getItem('rdzen-theme');
+        var theme = saved === 'light' || saved === 'dark'
+          ? saved
+          : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/rdze-app/sw.js', { scope: '/rdze-app/' }).catch(() => undefined);
+        });
+      }
+    </script>
+  </body>
+</html>
