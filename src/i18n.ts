@@ -87,6 +87,9 @@ export type Dict = {
   kegelIntro: string;
   reverseKegel: string;
   normalKegel: string;
+  holdDuration: string;
+  totalTime: string;
+  repsPlural: string;
   squeeze: string;
   release: string;
   rep: string;
@@ -146,7 +149,7 @@ export const translations: Record<Lang, Dict> = {
     yourSet: 'Twój zestaw',
     completed: 'ukończone',
     kegel: 'Kegel',
-    kegelSub: '10 powtórzeń · 3 min',
+    kegelSub: '10 powtórzeń · napięcie 3-5s',
     kegelDetail: 'Napnij i rozluźnij. W swoim tempie.',
     breath: 'Oddech',
     breathSub: '2 lub 5 minut',
@@ -207,7 +210,10 @@ export const translations: Record<Lang, Dict> = {
     breathTip: 'Wdech nosem. Wydech dłuższy i spokojny.',
     finishSave: 'Zakończ i zapisz',
     kegelSession: 'Sesja Kegla',
-    kegelIntro: 'Napnij na 4 sekundy, potem rozluźnij. 10 powtórzeń.',
+    kegelIntro: 'Napnij, potem rozluźnij. 10 powtórzeń.',
+    holdDuration: 'Czas napięcia',
+    totalTime: 'łącznie',
+    repsPlural: 'powtórzeń',
     reverseKegel: 'Odwrotny Kegel',
     normalKegel: 'Kegel',
     squeeze: 'Napnij',
@@ -264,7 +270,7 @@ export const translations: Record<Lang, Dict> = {
     yourSet: 'Your set',
     completed: 'completed',
     kegel: 'Kegel',
-    kegelSub: '10 reps · 3 min',
+    kegelSub: '10 reps · hold 3-5s',
     kegelDetail: 'Squeeze and release. At your own pace.',
     breath: 'Breath',
     breathSub: '2 or 5 minutes',
@@ -325,7 +331,10 @@ export const translations: Record<Lang, Dict> = {
     breathTip: 'Inhale through the nose. Exhale longer and calm.',
     finishSave: 'Finish and save',
     kegelSession: 'Kegel session',
-    kegelIntro: 'Squeeze for 4 seconds, then release. 10 reps.',
+    kegelIntro: 'Squeeze, then release. 10 reps.',
+    holdDuration: 'Hold duration',
+    totalTime: 'total',
+    repsPlural: 'reps',
     reverseKegel: 'Reverse Kegel',
     normalKegel: 'Kegel',
     squeeze: 'Squeeze',

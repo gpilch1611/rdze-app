@@ -1099,9 +1099,10 @@ function KegelModal({
   onFinish: (mode: KegelMode) => void;
 }) {
   const [mode, setMode] = useState<KegelMode>('normal');
+  const [holdSeconds, setHoldSeconds] = useState(4);
   const [stage, setStage] = useState<'setup' | 'ready' | 'running' | 'done'>('setup');
   const [elapsed, setElapsed] = useState(0);
-  const PHASE_LEN = 4;
+  const PHASE_LEN = holdSeconds;
   const TOTAL_REPS = 10;
   const TOTAL_SECONDS = PHASE_LEN * 2 * TOTAL_REPS;
 
@@ -1162,6 +1163,23 @@ function KegelModal({
                 <small>{t.release} → {t.squeeze}</small>
               </button>
             </div>
+            <p className="subtle" style={{ margin: '0 0 10px' }}>{t.holdDuration}</p>
+            <div className="duration-options" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
+              {[3, 4, 5].map((secs) => (
+                <button
+                  key={secs}
+                  className={holdSeconds === secs ? 'selected' : ''}
+                  onClick={() => setHoldSeconds(secs)}
+                >
+                  <strong>{secs}</strong>
+                  <span>{t.sec}</span>
+                </button>
+              ))}
+            </div>
+            <p className="breath-tip">
+              {TOTAL_REPS} {t.repsPlural} · {t.totalTime}{' '}
+              {Math.floor(TOTAL_SECONDS / 60)}:{(TOTAL_SECONDS % 60).toString().padStart(2, '0')}
+            </p>
             <button
               className="primary-button full"
               onClick={() => setStage('ready')}
