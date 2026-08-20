@@ -145,7 +145,15 @@ function formatTodayDate(lang: Lang): string {
   return lang === 'pl' ? formatted.charAt(0).toUpperCase() + formatted.slice(1) : formatted;
 }
 
-const EMPTY_DATA: StoredData = { sessions: [], journal: [] };
+const EMPTY_DATA: StoredData = {
+  profile: {
+    selectedWorkouts: ['kegel-normal', 'breathing-calm'],
+    difficulty: 'beginner',
+    hasCompletedOnboarding: false,
+  },
+  sessions: [],
+  journal: [],
+};
 
 function loadLang(): Lang {
   const saved = localStorage.getItem('rdzen-lang');
@@ -192,7 +200,14 @@ function App() {
   useEffect(() => {
     let active = true;
     loadFromDB().then((loaded) => {
-      if (active && loaded) setData(loaded);
+      if (active) {
+        // Migracja starych danych - dodaj profil jeśli brakuje
+        const data = loaded || EMPTY_DATA;
+        if (!data.profile) {
+          data.profile = EMPTY_DATA.profile;
+        }
+        setData(data);
+      }
     });
     return () => { active = false; };
   }, []);

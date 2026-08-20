@@ -4,6 +4,11 @@ const STORE = 'appdata';
 const KEY = 'state';
 
 export type StoredData = {
+  profile: {
+    selectedWorkouts: string[]; // ['kegel-normal', 'breathing-calm', ...]
+    difficulty: 'beginner' | 'intermediate' | 'advanced';
+    hasCompletedOnboarding: boolean;
+  };
   sessions: { type: 'kegel' | 'breathing'; date: string; minutes?: number; mode?: 'normal' | 'reverse' }[];
   journal: { date: string; tension: number; mood: number; note: string; control?: number }[];
 };
