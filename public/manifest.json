@@ -2,7 +2,7 @@
   "name": "rdzeń",
   "short_name": "rdzeń",
   "description": "Trening, oddech i świadoma progresja.",
-  "start_url": "/",
+  "start_url": "/rdze-app/",
   "display": "standalone",
   "background_color": "#101211",
   "theme_color": "#101211",

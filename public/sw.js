@@ -1,5 +1,5 @@
 const CACHE = 'rdzen-v1';
-const ASSETS = ['/', '/index.html', '/manifest.json'];
+const ASSETS = ['/rdze-app/', '/rdze-app/index.html', '/rdze-app/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -104,7 +104,7 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window' }).then((clients) => {
       if (clients.length > 0) return clients[0].focus();
-      return self.clients.openWindow('/');
+      return self.clients.openWindow('/rdze-app/');
     }),
   );
 });

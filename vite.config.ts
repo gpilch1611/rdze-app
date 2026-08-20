@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from 'node:url';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/rdze-app/',
   plugins: [react()],
   resolve: {
     alias: {
