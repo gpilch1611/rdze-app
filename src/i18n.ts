@@ -85,6 +85,7 @@ export type Dict = {
   // kegel timer
   kegelSession: string;
   kegelIntro: string;
+  kegelIntroReverse: string;
   reverseKegel: string;
   normalKegel: string;
   holdDuration: string;
@@ -124,6 +125,33 @@ export type Dict = {
   notifications: string;
   lightMode: string;
   darkMode: string;
+  // onboarding
+  onboardingTitle: string;
+  onboardingSubtitle: string;
+  onboardingChoose: string;
+  onboardingDifficulty: string;
+  onboardingBegin: string;
+  difficultyBeginner: string;
+  difficultyIntermediate: string;
+  difficultyAdvanced: string;
+  difficultyBeginnerDesc: string;
+  difficultyIntermediateDesc: string;
+  difficultyAdvancedDesc: string;
+  workoutKegel: string;
+  workoutKegelDesc: string;
+  workoutBreath: string;
+  workoutBreathDesc: string;
+  workoutBoth: string;
+  workoutBothDesc: string;
+  // settings
+  settingsTitle: string;
+  settingsChange: string;
+  settingsTrainings: string;
+  settingsDifficulty: string;
+  settingsClose: string;
+  // notification feedback
+  notifGranted: string;
+  notifDenied: string;
 };
 
 export const translations: Record<Lang, Dict> = {
@@ -211,6 +239,7 @@ export const translations: Record<Lang, Dict> = {
     finishSave: 'Zakończ i zapisz',
     kegelSession: 'Sesja Kegla',
     kegelIntro: 'Napnij, potem rozluźnij. 10 powtórzeń.',
+    kegelIntroReverse: 'Rozluźnij głęboko, potem napnij. 10 powtórzeń.',
     holdDuration: 'Czas napięcia',
     totalTime: 'łącznie',
     repsPlural: 'powtórzeń',
@@ -247,6 +276,30 @@ export const translations: Record<Lang, Dict> = {
     notifications: 'Powiadomienia',
     lightMode: 'Przełącz na jasny motyw',
     darkMode: 'Przełącz na ciemny motyw',
+    onboardingTitle: 'Zanim zaczniesz',
+    onboardingSubtitle: 'Wybierz co chcesz trenować. Możesz to zmienić w dowolnej chwili.',
+    onboardingChoose: 'Co chcesz trenować?',
+    onboardingDifficulty: 'Poziom zaawansowania',
+    onboardingBegin: 'Zaczynam',
+    difficultyBeginner: 'Początkujący',
+    difficultyIntermediate: 'Średniozaawansowany',
+    difficultyAdvanced: 'Zaawansowany',
+    difficultyBeginnerDesc: 'Krótkie sesje, delikatne tempo. Idealne na start.',
+    difficultyIntermediateDesc: 'Dłuższe sesje, większa intensywność.',
+    difficultyAdvancedDesc: 'Pełne sesje, maksymalna kontrola.',
+    workoutKegel: 'Trening Kegla',
+    workoutKegelDesc: 'Kontrola, wytrzymałość, performance seksualny.',
+    workoutBreath: 'Trening oddechu',
+    workoutBreathDesc: 'Redukcja stresu, regulacja napięcia, lepszy sen.',
+    workoutBoth: 'Oba',
+    workoutBothDesc: 'Pełny trening kontroli ciała i umysłu.',
+    settingsTitle: 'Ustawienia',
+    settingsChange: 'Zmień',
+    settingsTrainings: 'Moje treningi',
+    settingsDifficulty: 'Poziom',
+    settingsClose: 'Zamknij',
+    notifGranted: 'Powiadomienia włączone ✓',
+    notifDenied: 'Brak zgody w ustawieniach telefonu',
   },
   en: {
     brand: 'core',
@@ -332,6 +385,7 @@ export const translations: Record<Lang, Dict> = {
     finishSave: 'Finish and save',
     kegelSession: 'Kegel session',
     kegelIntro: 'Squeeze, then release. 10 reps.',
+    kegelIntroReverse: 'Release deeply, then squeeze. 10 reps.',
     holdDuration: 'Hold duration',
     totalTime: 'total',
     repsPlural: 'reps',
@@ -368,6 +422,30 @@ export const translations: Record<Lang, Dict> = {
     notifications: 'Notifications',
     lightMode: 'Switch to light mode',
     darkMode: 'Switch to dark mode',
+    onboardingTitle: 'Before you begin',
+    onboardingSubtitle: 'Choose what you want to train. You can change this anytime.',
+    onboardingChoose: 'What do you want to train?',
+    onboardingDifficulty: 'Skill level',
+    onboardingBegin: "Let's go",
+    difficultyBeginner: 'Beginner',
+    difficultyIntermediate: 'Intermediate',
+    difficultyAdvanced: 'Advanced',
+    difficultyBeginnerDesc: 'Short sessions, gentle pace. Perfect for starting out.',
+    difficultyIntermediateDesc: 'Longer sessions, higher intensity.',
+    difficultyAdvancedDesc: 'Full sessions, maximum control.',
+    workoutKegel: 'Kegel training',
+    workoutKegelDesc: 'Control, endurance, sexual performance.',
+    workoutBreath: 'Breath training',
+    workoutBreathDesc: 'Stress relief, tension control, better sleep.',
+    workoutBoth: 'Both',
+    workoutBothDesc: 'Full mind and body control training.',
+    settingsTitle: 'Settings',
+    settingsChange: 'Change',
+    settingsTrainings: 'My trainings',
+    settingsDifficulty: 'Level',
+    settingsClose: 'Close',
+    notifGranted: 'Notifications on ✓',
+    notifDenied: 'Blocked — allow in phone settings',
   },
 };
 

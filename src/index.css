@@ -153,8 +153,39 @@ button { cursor: pointer; }
 .icon-button { width: 38px; height: 38px; position: relative; }
 .notification i { position: absolute; right: 7px; top: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 .mobile-menu { display: none; border-radius: 9px; width: 38px; height: 38px; }
-.theme-toggle { display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 50%; color: var(--text-secondary); background: var(--bg-surface-2); width: 38px; height: 38px; margin-left: 8px; transition: .2s; }
+.theme-toggle { display: grid; place-items: center; border: 1px solid var(--border-default); border-radius: 50%; color: var(--text-secondary); background: var(--bg-surface-2); width: 38px; height: 38px; transition: .2s; }
 .theme-toggle:hover { color: var(--accent-text); border-color: var(--accent-border); }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.lang-toggle { display: flex; border: 1px solid var(--border-default); border-radius: 9px; overflow: hidden; background: var(--bg-surface-2); }
+.lang-toggle button { padding: 0 12px; height: 36px; border: 0; background: transparent; color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .5px; transition: .2s; }
+.lang-toggle button.active { background: var(--accent); color: var(--on-accent); }
+.lang-toggle button:hover:not(.active) { color: var(--text-primary); }
+.notif-wrap { position: relative; }
+.notif-toast { position: absolute; right: 0; top: calc(100% + 8px); white-space: nowrap; padding: 8px 12px; border-radius: 9px; font-size: 11px; font-weight: 600; z-index: 30; animation: rise .3s ease both; }
+.notif-toast.granted { background: var(--success); color: var(--on-success); }
+.notif-toast.denied { background: var(--bg-warm); color: var(--accent-text); border: 1px solid var(--border-warm); }
+.icon-button.notif-on { border-color: var(--accent-teal-border); color: var(--accent-teal-text); }
+.onboarding-modal { width: min(100%, 520px); background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 24px; padding: 40px; box-shadow: var(--shadow-modal); max-height: 92vh; overflow-y: auto; }
+.onboarding-brand { font: 800 22px Manrope; color: var(--accent-text); letter-spacing: -1px; margin-bottom: 14px; }
+.onboarding-modal h2 { font: 700 26px/1.15 Manrope; letter-spacing: -1px; margin: 0 0 8px; color: var(--text-heading); }
+.onboarding-label { font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-secondary); margin: 24px 0 12px; }
+.onboarding-choice { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.choice-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 12px; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-surface-2); color: var(--text-secondary); text-align: center; transition: .2s; }
+.choice-card:hover { border-color: var(--border-hover); color: var(--text-primary); }
+.choice-card.selected { border-color: var(--accent-border); background: var(--bg-warm); color: var(--accent-text); }
+.choice-card strong { font: 700 13px Manrope; color: inherit; }
+.choice-card span { font-size: 10px; color: var(--text-secondary); line-height: 1.4; }
+.choice-card.selected span { color: var(--text-muted); }
+.choice-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: var(--accent-soft); color: var(--accent-text); }
+.choice-card.selected .choice-icon { background: var(--accent-soft); }
+.difficulty-options { display: flex; flex-direction: column; gap: 8px; }
+.diff-card { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px; border: 1px solid var(--border-default); border-radius: 11px; background: var(--bg-surface-2); text-align: left; transition: .2s; }
+.diff-card:hover { border-color: var(--border-hover); }
+.diff-card.selected { border-color: var(--accent-teal-border); background: var(--bg-teal); }
+.diff-card strong { font: 600 13px Manrope; color: var(--text-heading); }
+.diff-card span { font-size: 11px; color: var(--text-secondary); }
+.settings-choice { display: flex; gap: 8px; }
+.settings-choice .diff-card { flex: 1; }
 .page { max-width: 965px; margin: auto; }
 .welcome-row { display: flex; justify-content: space-between; align-items: end; margin-bottom: 28px; }
 .welcome-row h2, .progress-intro h2 { font: 700 30px Manrope, sans-serif; letter-spacing: -1.2px; margin: 9px 0 8px; color: var(--text-heading); }

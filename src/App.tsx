@@ -6,7 +6,6 @@ import {
   Bell,
   Check,
   ChevronRight,
-  CircleHelp,
   Flame,
   Hand,
   HeartPulse,
@@ -17,9 +16,11 @@ import {
   Play,
   Plus,
   RotateCw,
+  Settings,
   ShieldCheck,
   Sparkles,
   Sun,
+  Target,
   Timer,
   Wind,
   X,
@@ -56,7 +57,14 @@ type JournalEntry = {
   control?: number;
 };
 
+type Profile = {
+  selectedWorkouts: string[];
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  hasCompletedOnboarding: boolean;
+};
+
 type StoredData = {
+  profile: Profile;
   sessions: Session[];
   journal: JournalEntry[];
 };
@@ -191,9 +199,15 @@ function App() {
   const [notifEnabled, setNotifEnabled] = useState(
     () => 'Notification' in window && Notification.permission === 'granted',
   );
-  const [levelUpToast, setLevelUpToast] = useState<{ track: 'kegel' | 'breath'; level: number } | null>(
-    null,
-  );
+  const [levelUpToast, setLevelUpToast] = useState<{ track: 'kegel' | 'breath'; level: number } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [notifFeedback, setNotifFeedback] = useState<'idle' | 'granted' | 'denied'>('idle');
+
+  // Synchronizuj onboarding z danymi po załadowaniu
+  useEffect(() => {
+    setShowOnboarding(!data.profile?.hasCompletedOnboarding);
+  }, [data.profile?.hasCompletedOnboarding]);
 
   const t = translations[lang];
 
@@ -282,12 +296,31 @@ function App() {
   };
 
   const enableNotifications = async () => {
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window)) {
+      setNotifFeedback('denied');
+      setTimeout(() => setNotifFeedback('idle'), 4000);
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      setNotifEnabled(true);
+      setNotifFeedback('granted');
+      tryRegisterPeriodicSync();
+      setTimeout(() => setNotifFeedback('idle'), 4000);
+      return;
+    }
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
       setNotifEnabled(true);
+      setNotifFeedback('granted');
       tryRegisterPeriodicSync();
+    } else {
+      setNotifFeedback('denied');
     }
+    setTimeout(() => setNotifFeedback('idle'), 4000);
+  };
+
+  const saveProfile = (profile: Profile) => {
+    setData(d => ({ ...d, profile }));
   };
 
   // Glowny mechanizm harmonogramu: dopoki appka jest otwarta (rowniez w tle
@@ -404,28 +437,14 @@ function App() {
             }}
           />
         </nav>
-        <div className="lang-switch">
-          <button
-            className={lang === 'pl' ? 'active' : ''}
-            onClick={() => setLang('pl')}
-          >
-            PL
-          </button>
-          <button
-            className={lang === 'en' ? 'active' : ''}
-            onClick={() => setLang('en')}
-          >
-            EN
-          </button>
-        </div>
         <div className="sidebar-footer">
+          <button className="quiet-link" onClick={() => setShowSettings(true)}>
+            <Settings size={16} /> {t.settingsTitle}
+          </button>
           <div className="privacy-note">
             <ShieldCheck size={16} />
             <span>{t.privacyNote}</span>
           </div>
-          <button className="quiet-link">
-            <CircleHelp size={16} /> {t.howItWorks}
-          </button>
         </div>
       </aside>
 
@@ -444,22 +463,43 @@ function App() {
               {view === 'today' ? t.today : view === 'progress' ? t.progress : t.journal}
             </h1>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="topbar-actions">
+            <div className="lang-toggle">
+              <button
+                className={lang === 'pl' ? 'active' : ''}
+                onClick={() => setLang('pl')}
+                aria-label="Polski"
+              >PL</button>
+              <button
+                className={lang === 'en' ? 'active' : ''}
+                onClick={() => setLang('en')}
+                aria-label="English"
+              >EN</button>
+            </div>
             <button
-              className="icon-button notification"
-              aria-label={t.notifications}
-              onClick={enableNotifications}
-            >
-              <Bell size={19} />
-              {notifEnabled && <i />}
-            </button>
-            <button
-              className="theme-toggle"
+              className="icon-button"
               aria-label={theme === 'dark' ? t.lightMode : t.darkMode}
               onClick={toggleTheme}
+              title={theme === 'dark' ? t.lightMode : t.darkMode}
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
+            <div className="notif-wrap">
+              <button
+                className={`icon-button${notifEnabled ? ' notif-on' : ''}`}
+                aria-label={t.notifications}
+                onClick={enableNotifications}
+                title={notifEnabled ? t.notifsEnabled : t.enableNotifs}
+              >
+                <Bell size={18} />
+                {notifEnabled && <i />}
+              </button>
+              {notifFeedback !== 'idle' && (
+                <div className={`notif-toast ${notifFeedback}`}>
+                  {notifFeedback === 'granted' ? t.notifGranted : t.notifDenied}
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -473,6 +513,7 @@ function App() {
             breathingTotal={breathingTotal}
             breathLevel={breathLevel}
             breathNext={breathNext}
+            selectedWorkouts={data.profile.selectedWorkouts}
             onKegel={() => setKegelOpen(true)}
             onBreathing={() => setBreathingOpen(true)}
             onGrounding={() => setGroundingOpen(true)}
@@ -540,6 +581,177 @@ function App() {
           </div>
         </div>
       )}
+      {showOnboarding && (
+        <OnboardingModal
+          t={t}
+          onComplete={(profile) => {
+            saveProfile({ ...profile, hasCompletedOnboarding: true });
+            setShowOnboarding(false);
+          }}
+        />
+      )}
+      {showSettings && (
+        <SettingsModal
+          t={t}
+          profile={data.profile}
+          onSave={(profile) => {
+            saveProfile({ ...profile, hasCompletedOnboarding: true });
+            setShowSettings(false);
+          }}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function OnboardingModal({
+  t,
+  onComplete,
+}: {
+  t: Dict;
+  onComplete: (profile: { selectedWorkouts: string[]; difficulty: 'beginner' | 'intermediate' | 'advanced' }) => void;
+}) {
+  const [choice, setChoice] = useState<'kegel' | 'breath' | 'both'>('both');
+  const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
+
+  const workouts = choice === 'kegel'
+    ? ['kegel-normal']
+    : choice === 'breath'
+    ? ['breathing-calm']
+    : ['kegel-normal', 'breathing-calm'];
+
+  const diffOptions: { key: 'beginner' | 'intermediate' | 'advanced'; label: string; desc: string }[] = [
+    { key: 'beginner', label: t.difficultyBeginner, desc: t.difficultyBeginnerDesc },
+    { key: 'intermediate', label: t.difficultyIntermediate, desc: t.difficultyIntermediateDesc },
+    { key: 'advanced', label: t.difficultyAdvanced, desc: t.difficultyAdvancedDesc },
+  ];
+
+  return (
+    <div className="modal-backdrop">
+      <div className="onboarding-modal animate-in">
+        <div className="onboarding-brand">rdzeń</div>
+        <h2>{t.onboardingTitle}</h2>
+        <p className="subtle">{t.onboardingSubtitle}</p>
+
+        <p className="onboarding-label">{t.onboardingChoose}</p>
+        <div className="onboarding-choice">
+          {([
+            { key: 'kegel', label: t.workoutKegel, desc: t.workoutKegelDesc, icon: <Target size={22} /> },
+            { key: 'breath', label: t.workoutBreath, desc: t.workoutBreathDesc, icon: <Wind size={22} /> },
+            { key: 'both', label: t.workoutBoth, desc: t.workoutBothDesc, icon: <Zap size={22} /> },
+          ] as const).map(opt => (
+            <button
+              key={opt.key}
+              className={`choice-card ${choice === opt.key ? 'selected' : ''}`}
+              onClick={() => setChoice(opt.key)}
+            >
+              <div className="choice-icon">{opt.icon}</div>
+              <strong>{opt.label}</strong>
+              <span>{opt.desc}</span>
+            </button>
+          ))}
+        </div>
+
+        <p className="onboarding-label">{t.onboardingDifficulty}</p>
+        <div className="difficulty-options">
+          {diffOptions.map(opt => (
+            <button
+              key={opt.key}
+              className={`diff-card ${difficulty === opt.key ? 'selected' : ''}`}
+              onClick={() => setDifficulty(opt.key)}
+            >
+              <strong>{opt.label}</strong>
+              <span>{opt.desc}</span>
+            </button>
+          ))}
+        </div>
+
+        <button
+          className="primary-button full"
+          style={{ marginTop: 28 }}
+          onClick={() => onComplete({ selectedWorkouts: workouts, difficulty })}
+        >
+          {t.onboardingBegin} <ChevronRight size={17} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SettingsModal({
+  t,
+  profile,
+  onSave,
+  onClose,
+}: {
+  t: Dict;
+  profile: Profile;
+  onSave: (profile: Profile) => void;
+  onClose: () => void;
+}) {
+  const hasKegel = profile.selectedWorkouts.includes('kegel-normal');
+  const hasBreath = profile.selectedWorkouts.includes('breathing-calm');
+  const [choice, setChoice] = useState<'kegel' | 'breath' | 'both'>(
+    hasKegel && hasBreath ? 'both' : hasKegel ? 'kegel' : 'breath'
+  );
+  const [difficulty, setDifficulty] = useState(profile.difficulty);
+
+  const diffOptions: { key: 'beginner' | 'intermediate' | 'advanced'; label: string }[] = [
+    { key: 'beginner', label: t.difficultyBeginner },
+    { key: 'intermediate', label: t.difficultyIntermediate },
+    { key: 'advanced', label: t.difficultyAdvanced },
+  ];
+
+  const save = () => {
+    const workouts = choice === 'kegel'
+      ? ['kegel-normal']
+      : choice === 'breath'
+      ? ['breathing-calm']
+      : ['kegel-normal', 'breathing-calm'];
+    onSave({ ...profile, selectedWorkouts: workouts, difficulty });
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="breath-modal animate-in" style={{ maxWidth: 420 }}>
+        <button className="close-button" onClick={onClose}><X size={19} /></button>
+        <h2 style={{ marginBottom: 20 }}>{t.settingsTitle}</h2>
+
+        <p className="onboarding-label">{t.settingsTrainings}</p>
+        <div className="settings-choice">
+          {([
+            { key: 'kegel', label: t.workoutKegel },
+            { key: 'breath', label: t.workoutBreath },
+            { key: 'both', label: t.workoutBoth },
+          ] as const).map(opt => (
+            <button
+              key={opt.key}
+              className={`diff-card ${choice === opt.key ? 'selected' : ''}`}
+              onClick={() => setChoice(opt.key)}
+            >
+              <strong>{opt.label}</strong>
+            </button>
+          ))}
+        </div>
+
+        <p className="onboarding-label" style={{ marginTop: 20 }}>{t.settingsDifficulty}</p>
+        <div className="settings-choice">
+          {diffOptions.map(opt => (
+            <button
+              key={opt.key}
+              className={`diff-card ${difficulty === opt.key ? 'selected' : ''}`}
+              onClick={() => setDifficulty(opt.key)}
+            >
+              <strong>{opt.label}</strong>
+            </button>
+          ))}
+        </div>
+
+        <button className="primary-button full" style={{ marginTop: 24 }} onClick={save}>
+          <Check size={16} /> {t.saveEntry}
+        </button>
+      </div>
     </div>
   );
 }
@@ -607,6 +819,7 @@ function TodayView({
   breathingTotal,
   breathLevel,
   breathNext,
+  selectedWorkouts,
   onKegel,
   onBreathing,
   onGrounding,
@@ -620,11 +833,16 @@ function TodayView({
   breathingTotal: number;
   breathLevel: number;
   breathNext: number;
+  selectedWorkouts: string[];
   onKegel: () => void;
   onBreathing: () => void;
   onGrounding: () => void;
   onJournal: () => void;
 }) {
+  const showKegel = selectedWorkouts.includes('kegel-normal') || selectedWorkouts.includes('kegel-reverse');
+  const showBreath = selectedWorkouts.includes('breathing-calm') || selectedWorkouts.includes('breathing-478') || selectedWorkouts.includes('breathing-box') || selectedWorkouts.includes('breathing-arousal');
+  const sessionCount = (showKegel ? 1 : 0) + (showBreath ? 1 : 0);
+  const doneCount = (showKegel && kegelDone ? 1 : 0) + (showBreath && breathingDone ? 1 : 0);
   return (
     <div className="page animate-in">
       <section className="welcome-row">
@@ -684,31 +902,35 @@ function TodayView({
           <h3>{t.yourSet}</h3>
         </div>
         <span className="completion">
-          {(kegelDone ? 1 : 0) + (breathingDone ? 1 : 0)} / 2 {t.completed}
+          {doneCount} / {sessionCount} {t.completed}
         </span>
       </div>
 
       <section className="session-grid">
-        <SessionCard
-          tone="warm"
-          icon={<Activity size={22} />}
-          title={t.kegel}
-          subtitle={t.kegelSub}
-          detail={t.kegelDetail}
-          done={kegelDone}
-          onClick={onKegel}
-          t={t}
-        />
-        <SessionCard
-          tone="teal"
-          icon={<Wind size={22} />}
-          title={t.breath}
-          subtitle={t.breathSub}
-          detail={t.breathDetail}
-          done={breathingDone}
-          onClick={onBreathing}
-          t={t}
-        />
+        {showKegel && (
+          <SessionCard
+            tone="warm"
+            icon={<Activity size={22} />}
+            title={t.kegel}
+            subtitle={t.kegelSub}
+            detail={t.kegelDetail}
+            done={kegelDone}
+            onClick={onKegel}
+            t={t}
+          />
+        )}
+        {showBreath && (
+          <SessionCard
+            tone="teal"
+            icon={<Wind size={22} />}
+            title={t.breath}
+            subtitle={t.breathSub}
+            detail={t.breathDetail}
+            done={breathingDone}
+            onClick={onBreathing}
+            t={t}
+          />
+        )}
       </section>
 
       <section className="grounding-strip">
@@ -1151,7 +1373,7 @@ function KegelModal({
         {stage === 'setup' && (
           <>
             <span className="eyebrow">{t.kegelSession}</span>
-            <h2>{t.kegelIntro}</h2>
+            <h2>{mode === 'reverse' ? t.kegelIntroReverse : t.kegelIntro}</h2>
             <div className="duration-options">
               <button
                 className={mode === 'normal' ? 'selected' : ''}
@@ -1205,7 +1427,7 @@ function KegelModal({
                 <span>{t.rep} 1 {t.of} 10</span>
               </div>
             </div>
-            <p className="breath-tip">{t.kegelIntro}</p>
+            <p className="breath-tip">{mode === 'reverse' ? t.kegelIntroReverse : t.kegelIntro}</p>
             <div className="modal-actions">
               <button className="ghost-button" onClick={() => setStage('setup')}>
                 <X size={16} /> {t.cancel}
