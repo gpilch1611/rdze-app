@@ -241,10 +241,10 @@ function App() {
     (total, session) => total + (session.type === 'breathing' ? session.minutes || 0 : 0),
     0,
   );
-  const kegelDays = new Set(
-    data.sessions.filter((session) => session.type === 'kegel').map((session) => session.date),
-  );
   const streak = useMemo(() => {
+    const kegelDays = new Set(
+      data.sessions.filter((session) => session.type === 'kegel').map((session) => session.date),
+    );
     let current = new Date();
     let days = 0;
     while (kegelDays.has(current.toISOString().slice(0, 10))) {
@@ -252,7 +252,7 @@ function App() {
       current = new Date(current.getTime() - 86400000);
     }
     return days;
-  }, [kegelDays]);
+  }, [data.sessions]);
 
   const { kegelLevel, kegelProgress } = useMemo(() => {
     const completedWeeks = countCompletedWeeks(data.sessions, data.journal);
@@ -545,6 +545,7 @@ function App() {
       {kegelOpen && (
         <KegelModal
           t={t}
+          difficulty={data.profile.difficulty}
           onClose={() => setKegelOpen(false)}
           onFinish={(mode) => {
             completeKegel(mode);
@@ -555,6 +556,7 @@ function App() {
       {breathingOpen && (
         <BreathingModal
           t={t}
+          difficulty={data.profile.difficulty}
           onClose={() => setBreathingOpen(false)}
           onFinish={(minutes) => {
             finishBreathing(minutes);
@@ -1320,19 +1322,26 @@ function Slider({
 
 function KegelModal({
   t,
+  difficulty,
   onClose,
   onFinish,
 }: {
   t: Dict;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
   onClose: () => void;
   onFinish: (mode: KegelMode) => void;
 }) {
+  const DIFFICULTY_DEFAULTS = {
+    beginner: { hold: 3, reps: 8 },
+    intermediate: { hold: 4, reps: 10 },
+    advanced: { hold: 5, reps: 12 },
+  } as const;
   const [mode, setMode] = useState<KegelMode>('normal');
-  const [holdSeconds, setHoldSeconds] = useState(4);
+  const [holdSeconds, setHoldSeconds] = useState<number>(DIFFICULTY_DEFAULTS[difficulty].hold);
   const [stage, setStage] = useState<'setup' | 'ready' | 'running' | 'done'>('setup');
   const [elapsed, setElapsed] = useState(0);
   const PHASE_LEN = holdSeconds;
-  const TOTAL_REPS = 10;
+  const TOTAL_REPS = DIFFICULTY_DEFAULTS[difficulty].reps;
   const TOTAL_SECONDS = PHASE_LEN * 2 * TOTAL_REPS;
 
   useEffect(() => {
@@ -1351,7 +1360,7 @@ function KegelModal({
       });
     }, 1000);
     return () => window.clearInterval(interval);
-  }, [stage]);
+  }, [stage, PHASE_LEN, TOTAL_SECONDS]);
 
   const rep = Math.floor(elapsed / (PHASE_LEN * 2));
   const within = elapsed % (PHASE_LEN * 2);
@@ -1486,14 +1495,16 @@ function KegelModal({
 
 function BreathingModal({
   t,
+  difficulty,
   onClose,
   onFinish,
 }: {
   t: Dict;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
   onClose: () => void;
   onFinish: (minutes: number) => void;
 }) {
-  const [minutes, setMinutes] = useState(2);
+  const [minutes, setMinutes] = useState(difficulty === 'advanced' ? 5 : 2);
   const [started, setStarted] = useState(false);
   const [seconds, setSeconds] = useState(0);
 
