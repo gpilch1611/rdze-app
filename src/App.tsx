@@ -18,7 +18,6 @@ import {
   Play,
   Plus,
   RotateCw,
-  Settings,
   ShieldCheck,
   Sparkles,
   Sun,
@@ -62,11 +61,20 @@ type JournalEntry = {
   control?: number;
 };
 
+type Difficulty = 'beginner' | 'intermediate' | 'advanced';
+
 type Profile = {
   selectedWorkouts: string[];
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: Difficulty; // stara wartosc globalna - zachowana dla migracji, nie uzywana do nowych zapisow
+  workoutDifficulty?: Record<string, Difficulty>; // poziom per konkretny trening
   hasCompletedOnboarding: boolean;
 };
+
+// Zwraca poziom trudnosci dla danego treningu - najpierw sprawdza mape per-trening,
+// potem spada do starej globalnej wartosci (migracja), w ostatecznosci 'beginner'.
+function getWorkoutDifficulty(profile: Profile, workoutId: string): Difficulty {
+  return profile.workoutDifficulty?.[workoutId] ?? profile.difficulty ?? 'beginner';
+}
 
 type StoredData = {
   profile: Profile;
@@ -208,7 +216,6 @@ function App() {
   );
   const [levelUpToast, setLevelUpToast] = useState<{ track: 'kegel' | 'breath'; level: number } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [notifFeedback, setNotifFeedback] = useState<'idle' | 'granted' | 'denied'>('idle');
 
   // Synchronizuj onboarding z danymi po załadowaniu
@@ -458,9 +465,6 @@ function App() {
           />
         </nav>
         <div className="sidebar-footer">
-          <button className="quiet-link" onClick={() => setShowSettings(true)}>
-            <Settings size={16} /> {t.settingsTitle}
-          </button>
           <div className="privacy-note">
             <ShieldCheck size={16} />
             <span>{t.privacyNote}</span>
@@ -575,7 +579,8 @@ function App() {
       {kegelOpen && (
         <KegelModal
           t={t}
-          difficulty={data.profile.difficulty}
+          difficultyNormal={getWorkoutDifficulty(data.profile, 'kegel-normal')}
+          difficultyReverse={getWorkoutDifficulty(data.profile, 'kegel-reverse')}
           onClose={() => setKegelOpen(false)}
           onFinish={(mode) => {
             completeKegel(mode);
@@ -586,7 +591,7 @@ function App() {
       {breathingOpen && (
         <BreathingModal
           t={t}
-          difficulty={data.profile.difficulty}
+          difficulty={getWorkoutDifficulty(data.profile, 'breathing-calm')}
           onClose={() => setBreathingOpen(false)}
           onFinish={(minutes) => {
             finishBreathing(minutes, 'breathing-calm');
@@ -597,7 +602,7 @@ function App() {
       {fourSevenEightOpen && (
         <FourSevenEightModal
           t={t}
-          difficulty={data.profile.difficulty}
+          difficulty={getWorkoutDifficulty(data.profile, 'breathing-4-7-8')}
           onClose={() => setFourSevenEightOpen(false)}
           onFinish={(minutes) => {
             finishBreathing(minutes, 'breathing-4-7-8');
@@ -614,6 +619,7 @@ function App() {
           lang={lang}
           workoutId={libraryDetail}
           isAdded={data.profile.selectedWorkouts.includes(libraryDetail)}
+          difficulty={getWorkoutDifficulty(data.profile, libraryDetail)}
           onClose={() => setLibraryDetail(null)}
           onAdd={() => {
             setData((d) => ({
@@ -621,6 +627,25 @@ function App() {
               profile: { ...d.profile, selectedWorkouts: [...d.profile.selectedWorkouts, libraryDetail] },
             }));
             setLibraryDetail(null);
+          }}
+          onRemove={() => {
+            setData((d) => ({
+              ...d,
+              profile: {
+                ...d.profile,
+                selectedWorkouts: d.profile.selectedWorkouts.filter((id) => id !== libraryDetail),
+              },
+            }));
+            setLibraryDetail(null);
+          }}
+          onDifficultyChange={(newDiff) => {
+            setData((d) => ({
+              ...d,
+              profile: {
+                ...d.profile,
+                workoutDifficulty: { ...d.profile.workoutDifficulty, [libraryDetail]: newDiff },
+              },
+            }));
           }}
           onStart={() => {
             setLibraryDetail(null);
@@ -655,17 +680,6 @@ function App() {
           }}
         />
       )}
-      {showSettings && (
-        <SettingsModal
-          t={t}
-          profile={data.profile}
-          onSave={(profile) => {
-            saveProfile({ ...profile, hasCompletedOnboarding: true });
-            setShowSettings(false);
-          }}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
     </div>
   );
 }
@@ -675,7 +689,7 @@ function OnboardingModal({
   onComplete,
 }: {
   t: Dict;
-  onComplete: (profile: { selectedWorkouts: string[]; difficulty: 'beginner' | 'intermediate' | 'advanced' }) => void;
+  onComplete: (profile: { selectedWorkouts: string[]; difficulty: Difficulty }) => void;
 }) {
   const [choice, setChoice] = useState<'kegel' | 'breath' | 'both'>('both');
   const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
@@ -738,83 +752,6 @@ function OnboardingModal({
           onClick={() => onComplete({ selectedWorkouts: workouts, difficulty })}
         >
           {t.onboardingBegin} <ChevronRight size={17} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function SettingsModal({
-  t,
-  profile,
-  onSave,
-  onClose,
-}: {
-  t: Dict;
-  profile: Profile;
-  onSave: (profile: Profile) => void;
-  onClose: () => void;
-}) {
-  const hasKegel = profile.selectedWorkouts.includes('kegel-normal');
-  const hasBreath = profile.selectedWorkouts.includes('breathing-calm');
-  const [choice, setChoice] = useState<'kegel' | 'breath' | 'both'>(
-    hasKegel && hasBreath ? 'both' : hasKegel ? 'kegel' : 'breath'
-  );
-  const [difficulty, setDifficulty] = useState(profile.difficulty);
-
-  const diffOptions: { key: 'beginner' | 'intermediate' | 'advanced'; label: string }[] = [
-    { key: 'beginner', label: t.difficultyBeginner },
-    { key: 'intermediate', label: t.difficultyIntermediate },
-    { key: 'advanced', label: t.difficultyAdvanced },
-  ];
-
-  const save = () => {
-    const workouts = choice === 'kegel'
-      ? ['kegel-normal']
-      : choice === 'breath'
-      ? ['breathing-calm']
-      : ['kegel-normal', 'breathing-calm'];
-    onSave({ ...profile, selectedWorkouts: workouts, difficulty });
-  };
-
-  return (
-    <div className="modal-backdrop">
-      <div className="breath-modal animate-in" style={{ maxWidth: 420 }}>
-        <button className="close-button" onClick={onClose}><X size={19} /></button>
-        <h2 style={{ marginBottom: 20 }}>{t.settingsTitle}</h2>
-
-        <p className="onboarding-label">{t.settingsTrainings}</p>
-        <div className="settings-choice">
-          {([
-            { key: 'kegel', label: t.workoutKegel },
-            { key: 'breath', label: t.workoutBreath },
-            { key: 'both', label: t.workoutBoth },
-          ] as const).map(opt => (
-            <button
-              key={opt.key}
-              className={`diff-card ${choice === opt.key ? 'selected' : ''}`}
-              onClick={() => setChoice(opt.key)}
-            >
-              <strong>{opt.label}</strong>
-            </button>
-          ))}
-        </div>
-
-        <p className="onboarding-label" style={{ marginTop: 20 }}>{t.settingsDifficulty}</p>
-        <div className="settings-choice">
-          {diffOptions.map(opt => (
-            <button
-              key={opt.key}
-              className={`diff-card ${difficulty === opt.key ? 'selected' : ''}`}
-              onClick={() => setDifficulty(opt.key)}
-            >
-              <strong>{opt.label}</strong>
-            </button>
-          ))}
-        </div>
-
-        <button className="primary-button full" style={{ marginTop: 24 }} onClick={save}>
-          <Check size={16} /> {t.saveEntry}
         </button>
       </div>
     </div>
@@ -1350,21 +1287,33 @@ function LibraryDetailModal({
   lang,
   workoutId,
   isAdded,
+  difficulty,
   onClose,
   onAdd,
+  onRemove,
   onStart,
+  onDifficultyChange,
 }: {
   t: Dict;
   lang: Lang;
   workoutId: string;
   isAdded: boolean;
+  difficulty: Difficulty;
   onClose: () => void;
   onAdd: () => void;
+  onRemove: () => void;
   onStart: () => void;
+  onDifficultyChange: (d: Difficulty) => void;
 }) {
   const workout = WORKOUTS.find((w) => w.id === workoutId);
   const edu = WORKOUT_EDUCATION[workoutId];
   if (!workout) return null;
+
+  const diffOptions: { key: Difficulty; label: string; desc: string }[] = [
+    { key: 'beginner', label: t.difficultyBeginner, desc: t.difficultyBeginnerDesc },
+    { key: 'intermediate', label: t.difficultyIntermediate, desc: t.difficultyIntermediateDesc },
+    { key: 'advanced', label: t.difficultyAdvanced, desc: t.difficultyAdvancedDesc },
+  ];
 
   return (
     <div className="modal-backdrop">
@@ -1397,12 +1346,32 @@ function LibraryDetailModal({
               <p className="onboarding-label" style={{ margin: '0 0 6px' }}>{t.timelineLabel}</p>
               <p className="subtle">{pick(edu.timeline, lang)}</p>
             </div>
+
+            <p className="onboarding-label">{t.settingsDifficulty}</p>
+            <div className="difficulty-options">
+              {diffOptions.map((opt) => (
+                <button
+                  key={opt.key}
+                  className={`diff-card ${difficulty === opt.key ? 'selected' : ''}`}
+                  onClick={() => onDifficultyChange(opt.key)}
+                >
+                  <strong>{opt.label}</strong>
+                  <span>{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+
             {isAdded ? (
-              <button className="primary-button full" style={{ marginTop: 8 }} onClick={onStart}>
-                <Play size={16} fill="currentColor" /> {t.startNow}
-              </button>
+              <>
+                <button className="primary-button full" style={{ marginTop: 20 }} onClick={onStart}>
+                  <Play size={16} fill="currentColor" /> {t.startNow}
+                </button>
+                <button className="ghost-button full" style={{ marginTop: 10 }} onClick={onRemove}>
+                  <X size={16} /> {t.removeFromTrainings}
+                </button>
+              </>
             ) : (
-              <button className="primary-button full" style={{ marginTop: 8 }} onClick={onAdd}>
+              <button className="primary-button full" style={{ marginTop: 20 }} onClick={onAdd}>
                 <Plus size={16} /> {t.addToMyTrainings}
               </button>
             )}
@@ -1555,12 +1524,14 @@ function Slider({
 
 function KegelModal({
   t,
-  difficulty,
+  difficultyNormal,
+  difficultyReverse,
   onClose,
   onFinish,
 }: {
   t: Dict;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficultyNormal: Difficulty;
+  difficultyReverse: Difficulty;
   onClose: () => void;
   onFinish: (mode: KegelMode) => void;
 }) {
@@ -1570,7 +1541,8 @@ function KegelModal({
     advanced: { hold: 5, reps: 12 },
   } as const;
   const [mode, setMode] = useState<KegelMode>('normal');
-  const [holdSeconds, setHoldSeconds] = useState<number>(DIFFICULTY_DEFAULTS[difficulty].hold);
+  const difficulty = mode === 'reverse' ? difficultyReverse : difficultyNormal;
+  const [holdSeconds, setHoldSeconds] = useState<number>(DIFFICULTY_DEFAULTS[difficultyNormal].hold);
   const [stage, setStage] = useState<'setup' | 'ready' | 'running' | 'done'>('setup');
   const [elapsed, setElapsed] = useState(0);
   const PHASE_LEN = holdSeconds;
@@ -1733,7 +1705,7 @@ function FourSevenEightModal({
   onFinish,
 }: {
   t: Dict;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: Difficulty;
   onClose: () => void;
   onFinish: (minutes: number) => void;
 }) {
@@ -1836,7 +1808,7 @@ function BreathingModal({
   onFinish,
 }: {
   t: Dict;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: Difficulty;
   onClose: () => void;
   onFinish: (minutes: number) => void;
 }) {

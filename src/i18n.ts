@@ -12,6 +12,7 @@ export type Dict = {
   librarySubtitle: string;
   comingSoon: string;
   addToMyTrainings: string;
+  removeFromTrainings: string;
   startNow: string;
   alreadyAdded: string;
   whatIsIt: string;
@@ -189,6 +190,7 @@ export const translations: Record<Lang, Dict> = {
     librarySubtitle: 'Więcej treningów do kontroli ciała. Dodaj to, czego potrzebujesz.',
     comingSoon: 'Wkrótce',
     addToMyTrainings: 'Dodaj do moich treningów',
+    removeFromTrainings: 'Usuń z moich treningów',
     startNow: 'Zacznij teraz',
     alreadyAdded: 'Już dodane ✓',
     whatIsIt: 'Na czym to polega?',
@@ -357,6 +359,7 @@ export const translations: Record<Lang, Dict> = {
     librarySubtitle: 'More trainings for body control. Add what you need.',
     comingSoon: 'Coming soon',
     addToMyTrainings: 'Add to my trainings',
+    removeFromTrainings: 'Remove from my trainings',
     startNow: 'Start now',
     alreadyAdded: 'Already added ✓',
     whatIsIt: 'What is it?',
