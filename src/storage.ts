@@ -9,7 +9,7 @@ export type StoredData = {
     difficulty: 'beginner' | 'intermediate' | 'advanced';
     hasCompletedOnboarding: boolean;
   };
-  sessions: { type: 'kegel' | 'breathing'; date: string; minutes?: number; mode?: 'normal' | 'reverse' }[];
+  sessions: { type: 'kegel' | 'breathing'; date: string; minutes?: number; mode?: 'normal' | 'reverse'; workoutId?: string }[];
   journal: { date: string; tension: number; mood: number; note: string; control?: number }[];
 };
 

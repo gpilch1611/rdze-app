@@ -6,10 +6,12 @@ import {
   Bell,
   Check,
   ChevronRight,
+  Compass,
   Flame,
   Hand,
   HeartPulse,
   Leaf,
+  Lock,
   Menu,
   Minus,
   Moon,
@@ -38,8 +40,10 @@ import {
   type Lang,
 } from './i18n';
 import { loadData as loadFromDB, saveData as saveToDB } from './storage';
+import { WORKOUTS, type Workout } from './workouts';
+import { WORKOUT_EDUCATION } from './workoutEducation';
 
-type View = 'today' | 'progress' | 'journal';
+type View = 'today' | 'progress' | 'journal' | 'library';
 type Theme = 'dark' | 'light';
 type KegelMode = 'normal' | 'reverse';
 type Session = {
@@ -47,6 +51,7 @@ type Session = {
   date: string;
   minutes?: number;
   mode?: KegelMode;
+  workoutId?: string;
 };
 
 type JournalEntry = {
@@ -195,6 +200,8 @@ function App() {
   const [breathingOpen, setBreathingOpen] = useState(false);
   const [kegelOpen, setKegelOpen] = useState(false);
   const [groundingOpen, setGroundingOpen] = useState(false);
+  const [fourSevenEightOpen, setFourSevenEightOpen] = useState(false);
+  const [libraryDetail, setLibraryDetail] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(
     () => 'Notification' in window && Notification.permission === 'granted',
@@ -278,11 +285,11 @@ function App() {
     setData((current) => ({ ...current, sessions: [...current.sessions, session] }));
 
   const completeKegel = (mode: KegelMode) => {
-    if (!kegelDone) addSession({ type: 'kegel', date: todayKey, mode });
+    if (!kegelDone) addSession({ type: 'kegel', date: todayKey, mode, workoutId: mode === 'reverse' ? 'kegel-reverse' : 'kegel-normal' });
   };
 
-  const finishBreathing = (minutes: number) => {
-    addSession({ type: 'breathing', date: todayKey, minutes });
+  const finishBreathing = (minutes: number, workoutId: string = 'breathing-calm') => {
+    addSession({ type: 'breathing', date: todayKey, minutes, workoutId });
   };
 
   const saveJournal = (entry: JournalEntry) => {
@@ -388,6 +395,10 @@ function App() {
     return () => clearTimeout(timeout);
   }, [levelUpToast]);
 
+  const isWorkoutDoneToday = (workoutId: string) =>
+    todaysSessions.some((s) => s.workoutId === workoutId);
+  const fourSevenEightDone = isWorkoutDoneToday('breathing-4-7-8');
+
   return (
     <div className="app-shell">
       <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
@@ -433,6 +444,15 @@ function App() {
             label={t.journal}
             onClick={() => {
               setView('journal');
+              setMenuOpen(false);
+            }}
+          />
+          <NavItem
+            active={view === 'library'}
+            icon={<Compass size={18} />}
+            label={t.library}
+            onClick={() => {
+              setView('library');
               setMenuOpen(false);
             }}
           />
@@ -514,10 +534,20 @@ function App() {
             breathLevel={breathLevel}
             breathNext={breathNext}
             selectedWorkouts={data.profile.selectedWorkouts}
+            fourSevenEightDone={fourSevenEightDone}
             onKegel={() => setKegelOpen(true)}
             onBreathing={() => setBreathingOpen(true)}
+            onFourSevenEight={() => setFourSevenEightOpen(true)}
             onGrounding={() => setGroundingOpen(true)}
             onJournal={() => setView('journal')}
+          />
+        )}
+        {view === 'library' && (
+          <LibraryView
+            t={t}
+            lang={lang}
+            selectedWorkouts={data.profile.selectedWorkouts}
+            onOpenDetail={(id) => setLibraryDetail(id)}
           />
         )}
         {view === 'progress' && (
@@ -559,13 +589,46 @@ function App() {
           difficulty={data.profile.difficulty}
           onClose={() => setBreathingOpen(false)}
           onFinish={(minutes) => {
-            finishBreathing(minutes);
+            finishBreathing(minutes, 'breathing-calm');
             setBreathingOpen(false);
+          }}
+        />
+      )}
+      {fourSevenEightOpen && (
+        <FourSevenEightModal
+          t={t}
+          difficulty={data.profile.difficulty}
+          onClose={() => setFourSevenEightOpen(false)}
+          onFinish={(minutes) => {
+            finishBreathing(minutes, 'breathing-4-7-8');
+            setFourSevenEightOpen(false);
           }}
         />
       )}
       {groundingOpen && (
         <GroundingModal t={t} onClose={() => setGroundingOpen(false)} />
+      )}
+      {libraryDetail && (
+        <LibraryDetailModal
+          t={t}
+          lang={lang}
+          workoutId={libraryDetail}
+          isAdded={data.profile.selectedWorkouts.includes(libraryDetail)}
+          onClose={() => setLibraryDetail(null)}
+          onAdd={() => {
+            setData((d) => ({
+              ...d,
+              profile: { ...d.profile, selectedWorkouts: [...d.profile.selectedWorkouts, libraryDetail] },
+            }));
+            setLibraryDetail(null);
+          }}
+          onStart={() => {
+            setLibraryDetail(null);
+            if (libraryDetail === 'kegel-normal' || libraryDetail === 'kegel-reverse') setKegelOpen(true);
+            else if (libraryDetail === 'breathing-calm') setBreathingOpen(true);
+            else if (libraryDetail === 'breathing-4-7-8') setFourSevenEightOpen(true);
+          }}
+        />
       )}
       {levelUpToast && (
         <div className="level-up-toast animate-in" role="status">
@@ -822,8 +885,10 @@ function TodayView({
   breathLevel,
   breathNext,
   selectedWorkouts,
+  fourSevenEightDone,
   onKegel,
   onBreathing,
+  onFourSevenEight,
   onGrounding,
   onJournal,
 }: {
@@ -836,15 +901,21 @@ function TodayView({
   breathLevel: number;
   breathNext: number;
   selectedWorkouts: string[];
+  fourSevenEightDone: boolean;
   onKegel: () => void;
   onBreathing: () => void;
+  onFourSevenEight: () => void;
   onGrounding: () => void;
   onJournal: () => void;
 }) {
   const showKegel = selectedWorkouts.includes('kegel-normal') || selectedWorkouts.includes('kegel-reverse');
-  const showBreath = selectedWorkouts.includes('breathing-calm') || selectedWorkouts.includes('breathing-478') || selectedWorkouts.includes('breathing-box') || selectedWorkouts.includes('breathing-arousal');
-  const sessionCount = (showKegel ? 1 : 0) + (showBreath ? 1 : 0);
-  const doneCount = (showKegel && kegelDone ? 1 : 0) + (showBreath && breathingDone ? 1 : 0);
+  const showBreath = selectedWorkouts.includes('breathing-calm');
+  const show478 = selectedWorkouts.includes('breathing-4-7-8');
+  const sessionCount = (showKegel ? 1 : 0) + (showBreath ? 1 : 0) + (show478 ? 1 : 0);
+  const doneCount =
+    (showKegel && kegelDone ? 1 : 0) +
+    (showBreath && breathingDone ? 1 : 0) +
+    (show478 && fourSevenEightDone ? 1 : 0);
   return (
     <div className="page animate-in">
       <section className="welcome-row">
@@ -930,6 +1001,18 @@ function TodayView({
             detail={t.breathDetail}
             done={breathingDone}
             onClick={onBreathing}
+            t={t}
+          />
+        )}
+        {show478 && (
+          <SessionCard
+            tone="teal"
+            icon={<Moon size={22} />}
+            title={t.breathing478}
+            subtitle={t.fourSevenEightIntro}
+            detail={t.fourSevenEightDetail}
+            done={fourSevenEightDone}
+            onClick={onFourSevenEight}
             t={t}
           />
         )}
@@ -1175,6 +1258,156 @@ function TrackCard({
         {Array.from({ length: 9 }).map((_, i) => (
           <i key={i} className={i < level ? 'filled' : ''} />
         ))}
+      </div>
+    </div>
+  );
+}
+
+function workoutIcon(icon: string, size = 20) {
+  switch (icon) {
+    case 'target': return <Target size={size} />;
+    case 'arrow-right': return <RotateCw size={size} />;
+    case 'wind': return <Wind size={size} />;
+    case 'moon': return <Moon size={size} />;
+    case 'grid': return <Timer size={size} />;
+    case 'heart-pulse': return <HeartPulse size={size} />;
+    case 'flame': return <Flame size={size} />;
+    case 'sparkles': return <Sparkles size={size} />;
+    case 'leaf': return <Leaf size={size} />;
+    default: return <Activity size={size} />;
+  }
+}
+
+function categoryLabel(category: Workout['category'], lang: Lang): string {
+  const map: Record<Workout['category'], [string, string]> = {
+    'Sexual Health': ['Zdrowie seksualne', 'Sexual health'],
+    'Stress Relief': ['Redukcja stresu', 'Stress relief'],
+    'Body Awareness': ['Świadomość ciała', 'Body awareness'],
+    'Breathing': ['Oddech', 'Breathing'],
+  };
+  return pick(map[category], lang);
+}
+
+function LibraryView({
+  t,
+  lang,
+  selectedWorkouts,
+  onOpenDetail,
+}: {
+  t: Dict;
+  lang: Lang;
+  selectedWorkouts: string[];
+  onOpenDetail: (id: string) => void;
+}) {
+  const categories = ['Sexual Health', 'Stress Relief', 'Body Awareness'] as const;
+  return (
+    <div className="page animate-in">
+      <section className="welcome-row">
+        <div>
+          <p className="eyebrow">{t.library}</p>
+          <h2>{t.library}</h2>
+          <p className="subtle">{t.librarySubtitle}</p>
+        </div>
+      </section>
+      {categories.map((cat) => {
+        const items = WORKOUTS.filter((w) => w.category === cat);
+        if (items.length === 0) return null;
+        return (
+          <div key={cat} style={{ marginBottom: 28 }}>
+            <p className="onboarding-label">{categoryLabel(cat, lang)}</p>
+            <div className="library-grid">
+              {items.map((w) => {
+                const added = selectedWorkouts.includes(w.id);
+                return (
+                  <button
+                    key={w.id}
+                    className={`library-card ${!w.implemented ? 'locked' : ''}`}
+                    onClick={() => onOpenDetail(w.id)}
+                  >
+                    <div className="library-card-icon">{workoutIcon(w.icon, 22)}</div>
+                    <strong>{t[w.nameKey as keyof Dict] as string}</strong>
+                    {!w.implemented && (
+                      <span className="library-badge">
+                        <Lock size={11} /> {t.comingSoon}
+                      </span>
+                    )}
+                    {w.implemented && added && (
+                      <span className="library-badge added">{t.alreadyAdded}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function LibraryDetailModal({
+  t,
+  lang,
+  workoutId,
+  isAdded,
+  onClose,
+  onAdd,
+  onStart,
+}: {
+  t: Dict;
+  lang: Lang;
+  workoutId: string;
+  isAdded: boolean;
+  onClose: () => void;
+  onAdd: () => void;
+  onStart: () => void;
+}) {
+  const workout = WORKOUTS.find((w) => w.id === workoutId);
+  const edu = WORKOUT_EDUCATION[workoutId];
+  if (!workout) return null;
+
+  return (
+    <div className="modal-backdrop">
+      <div className="breath-modal animate-in" style={{ maxWidth: 460, textAlign: 'left' }}>
+        <button className="close-button" onClick={onClose}><X size={19} /></button>
+        <div className="library-detail-icon">{workoutIcon(workout.icon, 26)}</div>
+        <h2 style={{ margin: '14px 0 4px' }}>{t[workout.nameKey as keyof Dict] as string}</h2>
+        <p className="subtle" style={{ marginBottom: 20 }}>{categoryLabel(workout.category, lang)}</p>
+
+        {!workout.implemented ? (
+          <div className="coming-soon-box">
+            <Lock size={18} />
+            <span>{t.comingSoon}</span>
+          </div>
+        ) : edu ? (
+          <>
+            <div className="edu-block">
+              <p className="onboarding-label" style={{ margin: '0 0 6px' }}>{t.whatIsIt}</p>
+              <p className="subtle">{pick(edu.what, lang)}</p>
+            </div>
+            <div className="edu-block">
+              <p className="onboarding-label" style={{ margin: '0 0 6px' }}>{t.whoFor}</p>
+              <p className="subtle">{pick(edu.who, lang)}</p>
+            </div>
+            <div className="edu-block">
+              <p className="onboarding-label" style={{ margin: '0 0 6px' }}>{t.benefitsLabel}</p>
+              <p className="subtle">{pick(edu.benefits, lang)}</p>
+            </div>
+            <div className="edu-block">
+              <p className="onboarding-label" style={{ margin: '0 0 6px' }}>{t.timelineLabel}</p>
+              <p className="subtle">{pick(edu.timeline, lang)}</p>
+            </div>
+            {isAdded ? (
+              <button className="primary-button full" style={{ marginTop: 8 }} onClick={onStart}>
+                <Play size={16} fill="currentColor" /> {t.startNow}
+              </button>
+            ) : (
+              <button className="primary-button full" style={{ marginTop: 8 }} onClick={onAdd}>
+                <Plus size={16} /> {t.addToMyTrainings}
+              </button>
+            )}
+          </>
+        ) : null}
       </div>
     </div>
   );
@@ -1486,6 +1719,109 @@ function KegelModal({
                 <Check size={17} /> {t.finishKegel}
               </button>
             </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FourSevenEightModal({
+  t,
+  difficulty,
+  onClose,
+  onFinish,
+}: {
+  t: Dict;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  onClose: () => void;
+  onFinish: (minutes: number) => void;
+}) {
+  const CYCLES = difficulty === 'advanced' ? 8 : difficulty === 'intermediate' ? 6 : 4;
+  const INHALE = 4;
+  const HOLD = 7;
+  const EXHALE = 8;
+  const CYCLE_LEN = INHALE + HOLD + EXHALE;
+  const TOTAL_SECONDS = CYCLE_LEN * CYCLES;
+
+  const [started, setStarted] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!started) return;
+    const interval = window.setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => window.clearInterval(interval);
+  }, [started]);
+
+  const isDone = seconds >= TOTAL_SECONDS;
+  const withinCycle = seconds % CYCLE_LEN;
+  const cycleNum = Math.min(CYCLES, Math.floor(seconds / CYCLE_LEN) + 1);
+
+  let phase: 'inhale' | 'hold' | 'exhale';
+  let phaseSeconds: number;
+  if (withinCycle < INHALE) {
+    phase = 'inhale';
+    phaseSeconds = INHALE - withinCycle;
+  } else if (withinCycle < INHALE + HOLD) {
+    phase = 'hold';
+    phaseSeconds = INHALE + HOLD - withinCycle;
+  } else {
+    phase = 'exhale';
+    phaseSeconds = CYCLE_LEN - withinCycle;
+  }
+
+  useEffect(() => {
+    if (started && seconds > 0 && (seconds % CYCLE_LEN === 0 || seconds % CYCLE_LEN === INHALE || seconds % CYCLE_LEN === INHALE + HOLD)) {
+      vibrate(25);
+    }
+  }, [started, seconds, CYCLE_LEN, INHALE, HOLD]);
+
+  useEffect(() => {
+    if (isDone) vibrate([40, 50, 40]);
+  }, [isDone]);
+
+  const phaseLabel = phase === 'inhale' ? t.fourSevenEightInhale : phase === 'hold' ? t.fourSevenEightHold : t.fourSevenEightExhale;
+  const circleClass = phase === 'exhale' ? 'exhale' : phase === 'inhale' ? 'inhale' : '';
+
+  return (
+    <div className="modal-backdrop">
+      <div className="breath-modal">
+        <button className="close-button" onClick={onClose}>
+          <X size={19} />
+        </button>
+        {!started ? (
+          <>
+            <span className="eyebrow">{t.breathing478}</span>
+            <h2>{t.fourSevenEightIntro}</h2>
+            <p className="subtle" style={{ margin: '12px 0 24px' }}>
+              {CYCLES} × ({INHALE}s + {HOLD}s + {EXHALE}s) · {t.totalTime} {Math.round(TOTAL_SECONDS / 60)} {t.minutes}
+            </p>
+            <button className="primary-button full" onClick={() => setStarted(true)}>
+              <Play size={17} fill="currentColor" /> {t.startSession}
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="eyebrow">{t.fourSevenEightCycle} {cycleNum}/{CYCLES}</span>
+            <h2>{isDone ? t.sessionDone : phaseLabel}</h2>
+            <div className={`breath-circle ${circleClass}`}>
+              <div>
+                <strong>{isDone ? 0 : phaseSeconds}</strong>
+                <span>{t.sec}</span>
+              </div>
+            </div>
+            {isDone ? (
+              <button
+                className="primary-button full"
+                onClick={() => onFinish(Math.round(TOTAL_SECONDS / 60) || 1)}
+              >
+                <Check size={17} /> {t.saveEntry}
+              </button>
+            ) : (
+              <button className="ghost-button full" onClick={onClose}>
+                <X size={16} /> {t.cancel}
+              </button>
+            )}
           </>
         )}
       </div>

@@ -8,6 +8,7 @@ export interface Workout {
   icon: string;
   minDifficulty: Difficulty;
   category: 'Sexual Health' | 'Stress Relief' | 'Body Awareness' | 'Breathing';
+  implemented: boolean;
 }
 
 // Lista wszystkich dostępnych treningów
@@ -19,6 +20,7 @@ export const WORKOUTS: Workout[] = [
     icon: 'target',
     minDifficulty: 'beginner',
     category: 'Sexual Health',
+    implemented: true,
   },
   {
     id: 'kegel-reverse',
@@ -27,6 +29,7 @@ export const WORKOUTS: Workout[] = [
     icon: 'arrow-right',
     minDifficulty: 'intermediate',
     category: 'Sexual Health',
+    implemented: true,
   },
   {
     id: 'breathing-calm',
@@ -35,6 +38,7 @@ export const WORKOUTS: Workout[] = [
     icon: 'wind',
     minDifficulty: 'beginner',
     category: 'Stress Relief',
+    implemented: true,
   },
   {
     id: 'breathing-4-7-8',
@@ -43,6 +47,7 @@ export const WORKOUTS: Workout[] = [
     icon: 'moon',
     minDifficulty: 'beginner',
     category: 'Stress Relief',
+    implemented: true,
   },
   {
     id: 'breathing-box',
@@ -51,6 +56,7 @@ export const WORKOUTS: Workout[] = [
     icon: 'grid',
     minDifficulty: 'beginner',
     category: 'Stress Relief',
+    implemented: false,
   },
   {
     id: 'breathing-arousal',
@@ -59,6 +65,7 @@ export const WORKOUTS: Workout[] = [
     icon: 'heart-pulse',
     minDifficulty: 'beginner',
     category: 'Sexual Health',
+    implemented: false,
   },
   {
     id: 'wim-hof',
@@ -67,6 +74,7 @@ export const WORKOUTS: Workout[] = [
     icon: 'flame',
     minDifficulty: 'intermediate',
     category: 'Stress Relief',
+    implemented: false,
   },
   {
     id: 'body-scan',
@@ -75,6 +83,7 @@ export const WORKOUTS: Workout[] = [
     icon: 'sparkles',
     minDifficulty: 'beginner',
     category: 'Body Awareness',
+    implemented: false,
   },
   {
     id: 'pelvic-release',
@@ -83,6 +92,7 @@ export const WORKOUTS: Workout[] = [
     icon: 'leaf',
     minDifficulty: 'intermediate',
     category: 'Sexual Health',
+    implemented: false,
   },
 ];
 

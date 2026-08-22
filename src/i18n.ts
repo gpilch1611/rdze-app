@@ -8,6 +8,27 @@ export type Dict = {
   today: string;
   progress: string;
   journal: string;
+  library: string;
+  librarySubtitle: string;
+  comingSoon: string;
+  addToMyTrainings: string;
+  startNow: string;
+  alreadyAdded: string;
+  whatIsIt: string;
+  whoFor: string;
+  benefitsLabel: string;
+  timelineLabel: string;
+  breathing478: string;
+  breathingBox: string;
+  breathingArousal: string;
+  wimHof: string;
+  bodyScan: string;
+  pelvicRelease: string;
+  fourSevenEightIntro: string;
+  fourSevenEightInhale: string;
+  fourSevenEightHold: string;
+  fourSevenEightExhale: string;
+  fourSevenEightCycle: string;
   privacyNote: string;
   howItWorks: string;
   todayPlan: string;
@@ -27,6 +48,7 @@ export type Dict = {
   breath: string;
   breathSub: string;
   breathDetail: string;
+  fourSevenEightDetail: string;
   ready: string;
   start: string;
   yourProgress: string;
@@ -163,6 +185,27 @@ export const translations: Record<Lang, Dict> = {
     today: 'Dzisiaj',
     progress: 'Progres',
     journal: 'Dziennik',
+    library: 'Odkryj',
+    librarySubtitle: 'Więcej treningów do kontroli ciała. Dodaj to, czego potrzebujesz.',
+    comingSoon: 'Wkrótce',
+    addToMyTrainings: 'Dodaj do moich treningów',
+    startNow: 'Zacznij teraz',
+    alreadyAdded: 'Już dodane ✓',
+    whatIsIt: 'Na czym to polega?',
+    whoFor: 'Dla kogo?',
+    benefitsLabel: 'Korzyści',
+    timelineLabel: 'Kiedy efekty?',
+    breathing478: 'Oddech 4-7-8',
+    breathingBox: 'Oddech kwadratowy',
+    breathingArousal: 'Oddech i pobudzenie',
+    wimHof: 'Metoda Wima Hofa',
+    bodyScan: 'Skan ciała',
+    pelvicRelease: 'Rozluźnienie miednicy',
+    fourSevenEightIntro: 'Wdech przez nos, zatrzymanie, długi wydech ustami.',
+    fourSevenEightInhale: 'Wdech',
+    fourSevenEightHold: 'Zatrzymaj',
+    fourSevenEightExhale: 'Wydech',
+    fourSevenEightCycle: 'Cykl',
     privacyNote: 'Twoje dane są tylko na tym urządzeniu.',
     howItWorks: 'Jak to działa?',
     todayPlan: 'DZISIEJSZY PLAN',
@@ -182,6 +225,7 @@ export const translations: Record<Lang, Dict> = {
     breath: 'Oddech',
     breathSub: '2 lub 5 minut',
     breathDetail: 'Zwolnij. Wdech 4s, wydech 6s.',
+    fourSevenEightDetail: 'Wdech 4s, zatrzymaj 7s, wydech 8s.',
     ready: 'Gotowe',
     start: 'Start',
     yourProgress: 'Twój progres',
@@ -309,6 +353,27 @@ export const translations: Record<Lang, Dict> = {
     today: 'Today',
     progress: 'Progress',
     journal: 'Journal',
+    library: 'Discover',
+    librarySubtitle: 'More trainings for body control. Add what you need.',
+    comingSoon: 'Coming soon',
+    addToMyTrainings: 'Add to my trainings',
+    startNow: 'Start now',
+    alreadyAdded: 'Already added ✓',
+    whatIsIt: 'What is it?',
+    whoFor: 'Who is it for?',
+    benefitsLabel: 'Benefits',
+    timelineLabel: 'When to expect results?',
+    breathing478: '4-7-8 Breathing',
+    breathingBox: 'Box Breathing',
+    breathingArousal: 'Arousal Breathing',
+    wimHof: 'Wim Hof Method',
+    bodyScan: 'Body Scan',
+    pelvicRelease: 'Pelvic Release',
+    fourSevenEightIntro: 'Inhale through your nose, hold, long exhale through your mouth.',
+    fourSevenEightInhale: 'Inhale',
+    fourSevenEightHold: 'Hold',
+    fourSevenEightExhale: 'Exhale',
+    fourSevenEightCycle: 'Cycle',
     privacyNote: 'Your data stays only on this device.',
     howItWorks: 'How it works',
     todayPlan: "TODAY'S PLAN",
@@ -328,6 +393,7 @@ export const translations: Record<Lang, Dict> = {
     breath: 'Breath',
     breathSub: '2 or 5 minutes',
     breathDetail: 'Slow down. Inhale 4s, exhale 6s.',
+    fourSevenEightDetail: 'Inhale 4s, hold 7s, exhale 8s.',
     ready: 'Done',
     start: 'Start',
     yourProgress: 'Your progress',

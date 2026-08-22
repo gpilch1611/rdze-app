@@ -186,6 +186,19 @@ button { cursor: pointer; }
 .diff-card span { font-size: 11px; color: var(--text-secondary); }
 .settings-choice { display: flex; gap: 8px; }
 .settings-choice .diff-card { flex: 1; }
+.library-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.library-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 10px; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-surface-2); color: var(--text-primary); text-align: center; transition: .2s; position: relative; }
+.library-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+.library-card.locked { opacity: .55; }
+.library-card strong { font: 600 12px Manrope; }
+.library-card-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: var(--accent-teal-soft); color: var(--accent-teal-text); }
+.library-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text-tertiary); }
+.library-badge.added { color: var(--accent-teal-text); }
+.library-detail-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--accent-teal-soft); color: var(--accent-teal-text); }
+.edu-block { margin-bottom: 16px; }
+.edu-block .subtle { line-height: 1.55; }
+.coming-soon-box { display: flex; align-items: center; gap: 10px; padding: 16px; border: 1px dashed var(--border-default); border-radius: 12px; color: var(--text-secondary); font-size: 13px; font-weight: 600; justify-content: center; }
+@media (max-width: 480px) { .library-grid { grid-template-columns: repeat(2, 1fr); } }
 .page { max-width: 965px; margin: auto; }
 .welcome-row { display: flex; justify-content: space-between; align-items: end; margin-bottom: 28px; }
 .welcome-row h2, .progress-intro h2 { font: 700 30px Manrope, sans-serif; letter-spacing: -1.2px; margin: 9px 0 8px; color: var(--text-heading); }
