@@ -28,6 +28,15 @@
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/rdze-app/sw.js', { scope: '/rdze-app/' }).catch(() => undefined);
         });
+        // Gdy nowa wersja Service Workera przejmie kontrole (po deployu),
+        // odswiez strone automatycznie - bez tego appka na telefonie
+        // pokazywalaby stara wersje az do recznego zamkniecia i otwarcia.
+        let refreshed = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshed) return;
+          refreshed = true;
+          window.location.reload();
+        });
       }
     </script>
   </body>

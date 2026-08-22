@@ -1,5 +1,8 @@
-const CACHE = 'rdzen-v1';
+// Wersja cache - PODBIJ przy kazdym deployu ktory zmienia zachowanie SW,
+// zeby wymusic swiezy install (chroni przed 'zablokowana' stara wersja).
+const CACHE = 'rdzen-v2';
 const ASSETS = ['/rdze-app/', '/rdze-app/index.html', '/rdze-app/manifest.json'];
+const NOTIF_LOG_CACHE = 'rdzen-notif-log';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -11,7 +14,9 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
+      Promise.all(
+        keys.filter((k) => k !== CACHE && k !== NOTIF_LOG_CACHE).map((k) => caches.delete(k)),
+      ),
     ),
   );
   self.clients.claim();
@@ -20,6 +25,31 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+
+  // Powloka appki (nawigacja / index.html): ZAWSZE najpierw siec, zeby
+  // dostac najswiezsza wersje wskazujaca na aktualne, zahashowane pliki
+  // JS/CSS. Bez tego appka na telefonie nigdy sie nie aktualizuje - stara
+  // zbuforowana strona zawsze wskazywala na stare bundle'e. Cache jest
+  // tylko fallbackiem, gdy nie ma sieci.
+  const isShell =
+    request.mode === 'navigate' ||
+    request.url.endsWith('/index.html') ||
+    request.url.endsWith('/rdze-app/');
+  if (isShell) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(() => caches.match(request)),
+    );
+    return;
+  }
+
+  // Zahashowane statyczne assety (np. /assets/index-XXXX.js) sa niezmienne
+  // pod danym URL-em - cache-first jest tu bezpieczny i szybszy.
   event.respondWith(
     caches.match(request).then(
       (cached) =>
@@ -52,7 +82,6 @@ const NOTIF_SLOTS = [
   { slot: 'evening', hour: 20, minute: 0, text: 'Wieczorna sesja czeka' },
   { slot: 'sunday', hour: 19, minute: 0, sundayOnly: true, text: 'Podsumowanie tygodnia gotowe' },
 ];
-const NOTIF_LOG_CACHE = 'rdzen-notif-log';
 const NOTIF_LOG_KEY = '/__notif-log';
 
 async function getNotifLog() {

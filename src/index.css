@@ -179,13 +179,14 @@ button { cursor: pointer; }
 .choice-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: var(--accent-soft); color: var(--accent-text); }
 .choice-card.selected .choice-icon { background: var(--accent-soft); }
 .difficulty-options { display: flex; flex-direction: column; gap: 8px; }
-.diff-card { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px; border: 1px solid var(--border-default); border-radius: 11px; background: var(--bg-surface-2); text-align: left; transition: .2s; }
+.diff-card { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px; border: 1px solid var(--border-default); border-radius: 11px; background: var(--bg-surface-2); text-align: left; transition: .2s; min-width: 0; }
 .diff-card:hover { border-color: var(--border-hover); }
 .diff-card.selected { border-color: var(--accent-teal-border); background: var(--bg-teal); }
-.diff-card strong { font: 600 13px Manrope; color: var(--text-heading); }
-.diff-card span { font-size: 11px; color: var(--text-secondary); }
-.settings-choice { display: flex; gap: 8px; }
-.settings-choice .diff-card { flex: 1; }
+.diff-card strong { font: 600 13px Manrope; color: var(--text-heading); overflow-wrap: break-word; word-break: break-word; hyphens: auto; }
+.diff-card span { font-size: 11px; color: var(--text-secondary); overflow-wrap: break-word; }
+.settings-choice { display: flex; gap: 8px; flex-wrap: wrap; }
+.settings-choice .diff-card { flex: 1 1 30%; min-width: 0; padding: 12px 10px; text-align: center; align-items: center; }
+.settings-choice .diff-card strong { font-size: 12px; text-align: center; }
 .library-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .library-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 10px; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-surface-2); color: var(--text-primary); text-align: center; transition: .2s; position: relative; }
 .library-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
