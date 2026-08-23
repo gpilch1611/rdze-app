@@ -200,6 +200,22 @@ button { cursor: pointer; }
 .edu-block .subtle { line-height: 1.55; }
 .coming-soon-box { display: flex; align-items: center; gap: 10px; padding: 16px; border: 1px dashed var(--border-default); border-radius: 12px; color: var(--text-secondary); font-size: 13px; font-weight: 600; justify-content: center; }
 @media (max-width: 480px) { .library-grid { grid-template-columns: repeat(2, 1fr); } }
+.heatmap-wrap { border: 1px solid var(--border-default); border-radius: 15px; background: var(--bg-surface); padding: 18px; margin-bottom: 24px; }
+.heatmap-scroll { overflow-x: auto; padding-bottom: 4px; }
+.heatmap-grid { display: flex; gap: 3px; width: max-content; }
+.heatmap-col { display: flex; flex-direction: column; gap: 3px; }
+.heatmap-cell { width: 11px; height: 11px; border-radius: 3px; background: var(--bg-surface-3); }
+.heatmap-cell.l0 { background: var(--bg-surface-3); }
+.heatmap-cell.l1 { background: var(--accent-teal-soft); }
+.heatmap-cell.l2 { background: var(--accent-teal); opacity: .65; }
+.heatmap-cell.l3 { background: var(--accent-teal); }
+.heatmap-legend { display: flex; align-items: center; gap: 5px; margin-top: 12px; font-size: 10px; color: var(--text-secondary); }
+.breakdown-list { border: 1px solid var(--border-default); border-radius: 15px; background: var(--bg-surface); overflow: hidden; margin-bottom: 24px; }
+.breakdown-row { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--border-soft); }
+.breakdown-row:last-child { border-bottom: 0; }
+.breakdown-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--accent-teal-soft); color: var(--accent-teal-text); flex-shrink: 0; }
+.breakdown-name { flex: 1; font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.breakdown-stat { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
 .page { max-width: 965px; margin: auto; }
 .welcome-row { display: flex; justify-content: space-between; align-items: end; margin-bottom: 28px; }
 .welcome-row h2, .progress-intro h2 { font: 700 30px Manrope, sans-serif; letter-spacing: -1.2px; margin: 9px 0 8px; color: var(--text-heading); }

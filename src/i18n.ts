@@ -68,6 +68,13 @@ export type Dict = {
   of9: string;
   minTotal: string;
   monthlyView: string;
+  activityTitle: string;
+  timePerWorkout: string;
+  sessionSingular: string;
+  sessionsPlural: string;
+  less: string;
+  more: string;
+  noSessionsYet: string;
   youNowVs: string;
   vs: string;
   streak: string;
@@ -250,6 +257,13 @@ export const translations: Record<Lang, Dict> = {
     of9: 'z 9 poziomów',
     minTotal: 'min łącznie',
     monthlyView: 'Miesięczne spojrzenie',
+    activityTitle: 'Aktywność',
+    timePerWorkout: 'Czas na trening',
+    sessionSingular: 'sesja',
+    sessionsPlural: 'sesje',
+    less: 'Mniej',
+    more: 'Więcej',
+    noSessionsYet: 'Brak sesji — zacznij pierwszy trening.',
     youNowVs: 'Ty teraz',
     vs: 'vs',
     streak: 'Streak',
@@ -423,6 +437,13 @@ export const translations: Record<Lang, Dict> = {
     of9: 'of 9 levels',
     minTotal: 'min total',
     monthlyView: 'Monthly view',
+    activityTitle: 'Activity',
+    timePerWorkout: 'Time per workout',
+    sessionSingular: 'session',
+    sessionsPlural: 'sessions',
+    less: 'Less',
+    more: 'More',
+    noSessionsYet: 'No sessions yet — start your first training.',
     youNowVs: 'You now',
     vs: 'vs',
     streak: 'Streak',

@@ -39,7 +39,7 @@ import {
   type Lang,
 } from './i18n';
 import { loadData as loadFromDB, saveData as saveToDB } from './storage';
-import { WORKOUTS, type Workout } from './workouts';
+import { WORKOUTS, getWorkoutById, type Workout } from './workouts';
 import { WORKOUT_EDUCATION } from './workoutEducation';
 
 type View = 'today' | 'progress' | 'journal' | 'library';
@@ -1176,6 +1176,113 @@ function ProgressView({
           </div>
         </div>
       </div>
+
+      <div className="section-heading" style={{ marginTop: 34 }}>
+        <h3>{t.activityTitle}</h3>
+      </div>
+      <ActivityHeatmap sessions={sessions} t={t} />
+
+      <div className="section-heading">
+        <h3>{t.timePerWorkout}</h3>
+      </div>
+      <WorkoutBreakdown sessions={sessions} t={t} />
+    </div>
+  );
+}
+
+function ActivityHeatmap({ sessions, t }: { sessions: Session[]; t: Dict }) {
+  const WEEKS = 14;
+  const countByDate = new Map<string, number>();
+  sessions.forEach((s) => {
+    countByDate.set(s.date, (countByDate.get(s.date) || 0) + 1);
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - (WEEKS * 7 - 1));
+  startDate.setDate(startDate.getDate() - startDate.getDay());
+
+  const days: { date: string; count: number }[] = [];
+  const cursor = new Date(startDate);
+  while (cursor <= today) {
+    const key = cursor.toISOString().slice(0, 10);
+    days.push({ date: key, count: countByDate.get(key) || 0 });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  const weeks: { date: string; count: number }[][] = [];
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7));
+  }
+
+  const levelClass = (count: number) => {
+    if (count === 0) return 'l0';
+    if (count === 1) return 'l1';
+    if (count === 2) return 'l2';
+    return 'l3';
+  };
+
+  return (
+    <div className="heatmap-wrap">
+      <div className="heatmap-scroll">
+        <div className="heatmap-grid">
+          {weeks.map((week, wi) => (
+            <div className="heatmap-col" key={wi}>
+              {week.map((day) => (
+                <div
+                  key={day.date}
+                  className={`heatmap-cell ${levelClass(day.count)}`}
+                  title={`${day.date} — ${day.count} ${day.count === 1 ? t.sessionSingular : t.sessionsPlural}`}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="heatmap-legend">
+        <span>{t.less}</span>
+        <div className="heatmap-cell l0" />
+        <div className="heatmap-cell l1" />
+        <div className="heatmap-cell l2" />
+        <div className="heatmap-cell l3" />
+        <span>{t.more}</span>
+      </div>
+    </div>
+  );
+}
+
+function WorkoutBreakdown({ sessions, t }: { sessions: Session[]; t: Dict }) {
+  const grouped = useMemo(() => {
+    const map = new Map<string, { count: number; minutes: number }>();
+    sessions.forEach((s) => {
+      const id = s.workoutId || (s.type === 'kegel' ? 'kegel-normal' : 'breathing-calm');
+      const entry = map.get(id) || { count: 0, minutes: 0 };
+      entry.count += 1;
+      entry.minutes += s.minutes || 0;
+      map.set(id, entry);
+    });
+    return Array.from(map.entries())
+      .map(([id, stats]) => ({ id, ...stats, workout: getWorkoutById(id) }))
+      .filter((x) => x.workout)
+      .sort((a, b) => b.count - a.count);
+  }, [sessions]);
+
+  if (grouped.length === 0) {
+    return <p className="subtle" style={{ margin: '4px 0 0' }}>{t.noSessionsYet}</p>;
+  }
+
+  return (
+    <div className="breakdown-list">
+      {grouped.map(({ id, count, minutes, workout }) => (
+        <div className="breakdown-row" key={id}>
+          <div className="breakdown-icon">{workoutIcon(workout!.icon, 16)}</div>
+          <span className="breakdown-name">{t[workout!.nameKey as keyof Dict] as string}</span>
+          <span className="breakdown-stat">
+            {count}× {minutes > 0 ? `· ${minutes} ${t.minutes}` : ''}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
