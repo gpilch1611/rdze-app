@@ -30,6 +30,8 @@ export type Dict = {
   fourSevenEightHold: string;
   fourSevenEightExhale: string;
   fourSevenEightCycle: string;
+  boxBreathingIntro: string;
+  boxBreathingDetail: string;
   privacyNote: string;
   howItWorks: string;
   todayPlan: string;
@@ -225,6 +227,8 @@ export const translations: Record<Lang, Dict> = {
     fourSevenEightHold: 'Zatrzymaj',
     fourSevenEightExhale: 'Wydech',
     fourSevenEightCycle: 'Cykl',
+    boxBreathingIntro: 'Wdech, zatrzymanie, wydech, zatrzymanie — po 4 sekundy każda faza.',
+    boxBreathingDetail: '4s wdech, 4s zatrzymanie, 4s wydech, 4s zatrzymanie.',
     privacyNote: 'Twoje dane są tylko na tym urządzeniu.',
     howItWorks: 'Jak to działa?',
     todayPlan: 'DZISIEJSZY PLAN',
@@ -411,6 +415,8 @@ export const translations: Record<Lang, Dict> = {
     fourSevenEightHold: 'Hold',
     fourSevenEightExhale: 'Exhale',
     fourSevenEightCycle: 'Cycle',
+    boxBreathingIntro: 'Inhale, hold, exhale, hold — 4 seconds each phase.',
+    boxBreathingDetail: '4s inhale, 4s hold, 4s exhale, 4s hold.',
     privacyNote: 'Your data stays only on this device.',
     howItWorks: 'How it works',
     todayPlan: "TODAY'S PLAN",

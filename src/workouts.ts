@@ -56,7 +56,7 @@ export const WORKOUTS: Workout[] = [
     icon: 'grid',
     minDifficulty: 'beginner',
     category: 'Stress Relief',
-    implemented: false,
+    implemented: true,
   },
   {
     id: 'breathing-arousal',

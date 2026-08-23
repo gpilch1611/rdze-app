@@ -211,6 +211,7 @@ function App() {
   const [kegelOpen, setKegelOpen] = useState(false);
   const [groundingOpen, setGroundingOpen] = useState(false);
   const [fourSevenEightOpen, setFourSevenEightOpen] = useState(false);
+  const [boxBreathingOpen, setBoxBreathingOpen] = useState(false);
   const [showQuickLog, setShowQuickLog] = useState(false);
   const [showBackup, setShowBackup] = useState(false);
   const [libraryDetail, setLibraryDetail] = useState<string | null>(null);
@@ -409,6 +410,7 @@ function App() {
   const isWorkoutDoneToday = (workoutId: string) =>
     todaysSessions.some((s) => s.workoutId === workoutId);
   const fourSevenEightDone = isWorkoutDoneToday('breathing-4-7-8');
+  const boxBreathingDone = isWorkoutDoneToday('breathing-box');
 
   return (
     <div className="app-shell">
@@ -546,9 +548,11 @@ function App() {
             breathNext={breathNext}
             selectedWorkouts={data.profile.selectedWorkouts}
             fourSevenEightDone={fourSevenEightDone}
+            boxBreathingDone={boxBreathingDone}
             onKegel={() => setKegelOpen(true)}
             onBreathing={() => setBreathingOpen(true)}
             onFourSevenEight={() => setFourSevenEightOpen(true)}
+            onBoxBreathing={() => setBoxBreathingOpen(true)}
             onGrounding={() => setGroundingOpen(true)}
             onJournal={() => setView('journal')}
           />
@@ -616,6 +620,18 @@ function App() {
           onFinish={(minutes) => {
             finishBreathing(minutes, 'breathing-4-7-8');
             setFourSevenEightOpen(false);
+            setShowQuickLog(true);
+          }}
+        />
+      )}
+      {boxBreathingOpen && (
+        <BoxBreathingModal
+          t={t}
+          difficulty={getWorkoutDifficulty(data.profile, 'breathing-box')}
+          onClose={() => setBoxBreathingOpen(false)}
+          onFinish={(minutes) => {
+            finishBreathing(minutes, 'breathing-box');
+            setBoxBreathingOpen(false);
             setShowQuickLog(true);
           }}
         />
@@ -688,6 +704,7 @@ function App() {
             if (libraryDetail === 'kegel-normal' || libraryDetail === 'kegel-reverse') setKegelOpen(true);
             else if (libraryDetail === 'breathing-calm') setBreathingOpen(true);
             else if (libraryDetail === 'breathing-4-7-8') setFourSevenEightOpen(true);
+            else if (libraryDetail === 'breathing-box') setBoxBreathingOpen(true);
           }}
         />
       )}
@@ -859,9 +876,11 @@ function TodayView({
   breathNext,
   selectedWorkouts,
   fourSevenEightDone,
+  boxBreathingDone,
   onKegel,
   onBreathing,
   onFourSevenEight,
+  onBoxBreathing,
   onGrounding,
   onJournal,
 }: {
@@ -875,20 +894,24 @@ function TodayView({
   breathNext: number;
   selectedWorkouts: string[];
   fourSevenEightDone: boolean;
+  boxBreathingDone: boolean;
   onKegel: () => void;
   onBreathing: () => void;
   onFourSevenEight: () => void;
+  onBoxBreathing: () => void;
   onGrounding: () => void;
   onJournal: () => void;
 }) {
   const showKegel = selectedWorkouts.includes('kegel-normal') || selectedWorkouts.includes('kegel-reverse');
   const showBreath = selectedWorkouts.includes('breathing-calm');
   const show478 = selectedWorkouts.includes('breathing-4-7-8');
-  const sessionCount = (showKegel ? 1 : 0) + (showBreath ? 1 : 0) + (show478 ? 1 : 0);
+  const showBox = selectedWorkouts.includes('breathing-box');
+  const sessionCount = (showKegel ? 1 : 0) + (showBreath ? 1 : 0) + (show478 ? 1 : 0) + (showBox ? 1 : 0);
   const doneCount =
     (showKegel && kegelDone ? 1 : 0) +
     (showBreath && breathingDone ? 1 : 0) +
-    (show478 && fourSevenEightDone ? 1 : 0);
+    (show478 && fourSevenEightDone ? 1 : 0) +
+    (showBox && boxBreathingDone ? 1 : 0);
   return (
     <div className="page animate-in">
       <section className="welcome-row">
@@ -986,6 +1009,18 @@ function TodayView({
             detail={t.fourSevenEightDetail}
             done={fourSevenEightDone}
             onClick={onFourSevenEight}
+            t={t}
+          />
+        )}
+        {showBox && (
+          <SessionCard
+            tone="teal"
+            icon={<Timer size={22} />}
+            title={t.breathingBox}
+            subtitle={t.boxBreathingIntro}
+            detail={t.boxBreathingDetail}
+            done={boxBreathingDone}
+            onClick={onBoxBreathing}
             t={t}
           />
         )}
@@ -1974,6 +2009,111 @@ function KegelModal({
                 <Check size={17} /> {t.finishKegel}
               </button>
             </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BoxBreathingModal({
+  t,
+  difficulty,
+  onClose,
+  onFinish,
+}: {
+  t: Dict;
+  difficulty: Difficulty;
+  onClose: () => void;
+  onFinish: (minutes: number) => void;
+}) {
+  const CYCLES = difficulty === 'advanced' ? 8 : difficulty === 'intermediate' ? 6 : 4;
+  const PHASE = 4;
+  const CYCLE_LEN = PHASE * 4; // wdech, zatrzymaj, wydech, zatrzymaj
+  const TOTAL_SECONDS = CYCLE_LEN * CYCLES;
+
+  const [started, setStarted] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!started) return;
+    const interval = window.setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => window.clearInterval(interval);
+  }, [started]);
+
+  const isDone = seconds >= TOTAL_SECONDS;
+  const withinCycle = seconds % CYCLE_LEN;
+  const cycleNum = Math.min(CYCLES, Math.floor(seconds / CYCLE_LEN) + 1);
+
+  let phase: 'inhale' | 'hold1' | 'exhale' | 'hold2';
+  let phaseSeconds: number;
+  if (withinCycle < PHASE) {
+    phase = 'inhale';
+    phaseSeconds = PHASE - withinCycle;
+  } else if (withinCycle < PHASE * 2) {
+    phase = 'hold1';
+    phaseSeconds = PHASE * 2 - withinCycle;
+  } else if (withinCycle < PHASE * 3) {
+    phase = 'exhale';
+    phaseSeconds = PHASE * 3 - withinCycle;
+  } else {
+    phase = 'hold2';
+    phaseSeconds = CYCLE_LEN - withinCycle;
+  }
+
+  useEffect(() => {
+    if (started && seconds > 0 && seconds % PHASE === 0) vibrate(20);
+  }, [started, seconds, PHASE]);
+
+  useEffect(() => {
+    if (isDone) vibrate([40, 50, 40]);
+  }, [isDone]);
+
+  const phaseLabel =
+    phase === 'inhale' ? t.fourSevenEightInhale :
+    phase === 'exhale' ? t.fourSevenEightExhale :
+    t.fourSevenEightHold;
+  const circleClass = phase === 'exhale' ? 'exhale' : phase === 'inhale' ? 'inhale' : '';
+
+  return (
+    <div className="modal-backdrop">
+      <div className="breath-modal">
+        <button className="close-button" onClick={onClose}>
+          <X size={19} />
+        </button>
+        {!started ? (
+          <>
+            <span className="eyebrow">{t.breathingBox}</span>
+            <h2>{t.boxBreathingIntro}</h2>
+            <p className="subtle" style={{ margin: '12px 0 24px' }}>
+              {CYCLES} × 4×{PHASE}s · {t.totalTime} {Math.round(TOTAL_SECONDS / 60)} {t.minutes}
+            </p>
+            <button className="primary-button full" onClick={() => setStarted(true)}>
+              <Play size={17} fill="currentColor" /> {t.startSession}
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="eyebrow">{t.fourSevenEightCycle} {cycleNum}/{CYCLES}</span>
+            <h2>{isDone ? t.sessionDone : phaseLabel}</h2>
+            <div className={`breath-circle ${circleClass}`}>
+              <div>
+                <strong>{isDone ? 0 : phaseSeconds}</strong>
+                <span>{t.sec}</span>
+              </div>
+            </div>
+            {isDone ? (
+              <button
+                className="primary-button full"
+                onClick={() => onFinish(Math.round(TOTAL_SECONDS / 60) || 1)}
+              >
+                <Check size={17} /> {t.saveEntry}
+              </button>
+            ) : (
+              <button className="ghost-button full" onClick={onClose}>
+                <X size={16} /> {t.cancel}
+              </button>
+            )}
           </>
         )}
       </div>

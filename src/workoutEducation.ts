@@ -82,4 +82,22 @@ export const WORKOUT_EDUCATION: Record<string, WorkoutEducation> = {
       'Effect is felt immediately. With 2x daily use, improved sleep onset is typically visible after 1-2 weeks.',
     ],
   },
+  'breathing-box': {
+    what: [
+      'Cztery równe fazy po 4 sekundy: wdech, zatrzymanie, wydech, zatrzymanie. Technika stosowana m.in. przez jednostki wojskowe (Navy SEALs) do szybkiego opanowania stresu pod presją.',
+      'Four equal 4-second phases: inhale, hold, exhale, hold. Used by military units (Navy SEALs) to quickly regain control under stress.',
+    ],
+    who: [
+      'Dla osób, które potrzebują szybko "zresetować się" w stresującej sytuacji - przed rozmową, egzaminem, wystąpieniem, albo w trakcie nagłego napięcia.',
+      'For people who need to quickly "reset" in a stressful situation - before a conversation, exam, presentation, or during sudden tension.',
+    ],
+    benefits: [
+      'Regularna, symetryczna struktura daje umysłowi jasny punkt skupienia, co odrywa uwagę od źródła stresu i stabilizuje rytm oddechu szybciej niż swobodne oddychanie.',
+      'The regular, symmetrical structure gives the mind a clear focal point, pulling attention away from the stressor and stabilizing breathing rhythm faster than free breathing.',
+    ],
+    timeline: [
+      'Efekt zauważalny zwykle po 4-6 pełnych cyklach (ok. 1-1.5 minuty).',
+      'Effect is usually noticeable after 4-6 full cycles (about 1-1.5 minutes).',
+    ],
+  },
 };
