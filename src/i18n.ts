@@ -98,6 +98,12 @@ export type Dict = {
   feedsKegel: string;
   saveEntry: string;
   quickLogEyebrow: string;
+  backupTitle: string;
+  backupSubtitle: string;
+  backupExport: string;
+  backupImport: string;
+  backupImportError: string;
+  backupImportSuccess: string;
   quickLogTitle: string;
   quickLogSubtitle: string;
   skipLog: string;
@@ -287,6 +293,12 @@ export const translations: Record<Lang, Dict> = {
     feedsKegel: 'To zasila Twój tor Kegla.',
     saveEntry: 'Zapisz dzisiejszy wpis',
     quickLogEyebrow: 'Po treningu',
+    backupTitle: 'Kopia zapasowa',
+    backupSubtitle: 'Twoje dane są zapisane tylko na tym urządzeniu. Pobierz kopię, żeby nie stracić postępu przy zmianie telefonu lub czyszczeniu danych przeglądarki.',
+    backupExport: 'Pobierz kopię danych',
+    backupImport: 'Wgraj kopię z pliku',
+    backupImportError: 'Nie udało się wczytać pliku — sprawdź czy to poprawna kopia zapasowa Rdzenia.',
+    backupImportSuccess: 'Dane wczytane pomyślnie.',
     quickLogTitle: 'Jak się czujesz?',
     quickLogSubtitle: 'Opcjonalne. Pomaga śledzić postęp w czasie.',
     skipLog: 'Pomiń',
@@ -467,6 +479,12 @@ export const translations: Record<Lang, Dict> = {
     feedsKegel: 'This feeds your Kegel track.',
     saveEntry: "Save today's entry",
     quickLogEyebrow: 'After training',
+    backupTitle: 'Backup',
+    backupSubtitle: 'Your data is only stored on this device. Download a backup so you don\'t lose your progress if you switch phones or clear browser data.',
+    backupExport: 'Download data backup',
+    backupImport: 'Restore from file',
+    backupImportError: "Couldn't read the file — check it's a valid Rdzeń backup.",
+    backupImportSuccess: 'Data restored successfully.',
     quickLogTitle: 'How do you feel?',
     quickLogSubtitle: 'Optional. Helps track your progress over time.',
     skipLog: 'Skip',

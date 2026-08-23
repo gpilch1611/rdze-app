@@ -7,6 +7,7 @@ import {
   Check,
   ChevronRight,
   Compass,
+  Download,
   Flame,
   Hand,
   HeartPulse,
@@ -23,6 +24,7 @@ import {
   Sun,
   Target,
   Timer,
+  Upload,
   Wind,
   X,
   Zap,
@@ -210,6 +212,7 @@ function App() {
   const [groundingOpen, setGroundingOpen] = useState(false);
   const [fourSevenEightOpen, setFourSevenEightOpen] = useState(false);
   const [showQuickLog, setShowQuickLog] = useState(false);
+  const [showBackup, setShowBackup] = useState(false);
   const [libraryDetail, setLibraryDetail] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(
@@ -466,6 +469,9 @@ function App() {
           />
         </nav>
         <div className="sidebar-footer">
+          <button className="quiet-link" onClick={() => setShowBackup(true)}>
+            <Download size={16} /> {t.backupTitle}
+          </button>
           <div className="privacy-note">
             <ShieldCheck size={16} />
             <span>{t.privacyNote}</span>
@@ -633,6 +639,14 @@ function App() {
             });
             setShowQuickLog(false);
           }}
+        />
+      )}
+      {showBackup && (
+        <BackupModal
+          t={t}
+          data={data}
+          onClose={() => setShowBackup(false)}
+          onImport={(imported) => setData(imported)}
         />
       )}
       {libraryDetail && (
@@ -1609,6 +1623,96 @@ function JournalView({
             </>
           )}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function BackupModal({
+  t,
+  data,
+  onClose,
+  onImport,
+}: {
+  t: Dict;
+  data: StoredData;
+  onClose: () => void;
+  onImport: (data: StoredData) => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [imported, setImported] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rdzen-backup-${todayKey}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportClick = () => fileInputRef.current?.click();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string);
+        if (
+          !parsed ||
+          typeof parsed !== 'object' ||
+          !parsed.profile ||
+          !Array.isArray(parsed.sessions) ||
+          !Array.isArray(parsed.journal)
+        ) {
+          throw new Error('invalid shape');
+        }
+        onImport(parsed as StoredData);
+        setImported(true);
+      } catch {
+        setError(t.backupImportError);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="breath-modal animate-in" style={{ maxWidth: 420, textAlign: 'left' }}>
+        <button className="close-button" onClick={onClose}><X size={19} /></button>
+        <span className="eyebrow">{t.backupTitle}</span>
+        <h2 style={{ marginBottom: 8 }}>{t.backupTitle}</h2>
+        <p className="subtle" style={{ marginBottom: 22 }}>{t.backupSubtitle}</p>
+        <button className="primary-button full" onClick={handleExport}>
+          <Download size={16} /> {t.backupExport}
+        </button>
+        <button className="ghost-button full" style={{ marginTop: 10 }} onClick={handleImportClick}>
+          <Upload size={16} /> {t.backupImport}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+        {error && (
+          <p style={{ color: 'var(--accent-text)', fontSize: 12, marginTop: 14 }}>{error}</p>
+        )}
+        {imported && !error && (
+          <p style={{ color: 'var(--accent-teal-text)', fontSize: 12, marginTop: 14 }}>
+            {t.backupImportSuccess}
+          </p>
+        )}
       </div>
     </div>
   );
