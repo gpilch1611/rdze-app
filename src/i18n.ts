@@ -90,6 +90,10 @@ export type Dict = {
   controlRate: string;
   feedsKegel: string;
   saveEntry: string;
+  quickLogEyebrow: string;
+  quickLogTitle: string;
+  quickLogSubtitle: string;
+  skipLog: string;
   saved: string;
   breathSession: string;
   chooseRhythm: string;
@@ -268,6 +272,10 @@ export const translations: Record<Lang, Dict> = {
     controlRate: 'Jak oceniasz swoją kontrolę?',
     feedsKegel: 'To zasila Twój tor Kegla.',
     saveEntry: 'Zapisz dzisiejszy wpis',
+    quickLogEyebrow: 'Po treningu',
+    quickLogTitle: 'Jak się czujesz?',
+    quickLogSubtitle: 'Opcjonalne. Pomaga śledzić postęp w czasie.',
+    skipLog: 'Pomiń',
     saved: 'Zapisano',
     breathSession: 'Sesja oddechowa',
     chooseRhythm: 'Wybierz swój rytm.',
@@ -437,6 +445,10 @@ export const translations: Record<Lang, Dict> = {
     controlRate: 'How do you rate your control?',
     feedsKegel: 'This feeds your Kegel track.',
     saveEntry: "Save today's entry",
+    quickLogEyebrow: 'After training',
+    quickLogTitle: 'How do you feel?',
+    quickLogSubtitle: 'Optional. Helps track your progress over time.',
+    skipLog: 'Skip',
     saved: 'Saved',
     breathSession: 'Breath session',
     chooseRhythm: 'Choose your rhythm.',

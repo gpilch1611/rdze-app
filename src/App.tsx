@@ -209,6 +209,7 @@ function App() {
   const [kegelOpen, setKegelOpen] = useState(false);
   const [groundingOpen, setGroundingOpen] = useState(false);
   const [fourSevenEightOpen, setFourSevenEightOpen] = useState(false);
+  const [showQuickLog, setShowQuickLog] = useState(false);
   const [libraryDetail, setLibraryDetail] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(
@@ -585,6 +586,7 @@ function App() {
           onFinish={(mode) => {
             completeKegel(mode);
             setKegelOpen(false);
+            setShowQuickLog(true);
           }}
         />
       )}
@@ -596,6 +598,7 @@ function App() {
           onFinish={(minutes) => {
             finishBreathing(minutes, 'breathing-calm');
             setBreathingOpen(false);
+            setShowQuickLog(true);
           }}
         />
       )}
@@ -607,11 +610,30 @@ function App() {
           onFinish={(minutes) => {
             finishBreathing(minutes, 'breathing-4-7-8');
             setFourSevenEightOpen(false);
+            setShowQuickLog(true);
           }}
         />
       )}
       {groundingOpen && (
         <GroundingModal t={t} onClose={() => setGroundingOpen(false)} />
+      )}
+      {showQuickLog && (
+        <QuickLogModal
+          t={t}
+          existing={data.journal.find((j) => j.date === todayKey)}
+          onSkip={() => setShowQuickLog(false)}
+          onSave={(tension, mood) => {
+            const existing = data.journal.find((j) => j.date === todayKey);
+            saveJournal({
+              date: todayKey,
+              tension,
+              mood,
+              note: existing?.note ?? '',
+              control: existing?.control,
+            });
+            setShowQuickLog(false);
+          }}
+        />
       )}
       {libraryDetail && (
         <LibraryDetailModal
@@ -1479,6 +1501,56 @@ function JournalView({
               {t.saveEntry} <ArrowRight size={17} />
             </>
           )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function QuickLogModal({
+  t,
+  existing,
+  onSave,
+  onSkip,
+}: {
+  t: Dict;
+  existing?: JournalEntry;
+  onSave: (tension: number, mood: number) => void;
+  onSkip: () => void;
+}) {
+  const [tension, setTension] = useState(existing?.tension ?? 3);
+  const [mood, setMood] = useState(existing?.mood ?? 3);
+
+  return (
+    <div className="modal-backdrop">
+      <div className="breath-modal animate-in" style={{ maxWidth: 400 }}>
+        <button className="close-button" onClick={onSkip}><X size={19} /></button>
+        <span className="eyebrow">{t.quickLogEyebrow}</span>
+        <h2 style={{ marginBottom: 4 }}>{t.quickLogTitle}</h2>
+        <p className="subtle" style={{ marginBottom: 22 }}>{t.quickLogSubtitle}</p>
+        <Slider
+          label={t.tensionLevel}
+          value={tension}
+          minLabel={t.loose}
+          maxLabel={t.tight}
+          onChange={setTension}
+        />
+        <Slider
+          label={t.mood}
+          value={mood}
+          minLabel={t.low}
+          maxLabel={t.well}
+          onChange={setMood}
+        />
+        <button
+          className="primary-button full"
+          style={{ marginTop: 12 }}
+          onClick={() => onSave(tension, mood)}
+        >
+          <Check size={16} /> {t.saveEntry}
+        </button>
+        <button className="ghost-button full" style={{ marginTop: 10 }} onClick={onSkip}>
+          {t.skipLog}
         </button>
       </div>
     </div>
