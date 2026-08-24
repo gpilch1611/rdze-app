@@ -1,13 +1,9 @@
 // Wersja cache - PODBIJ przy kazdym deployu ktory zmienia zachowanie SW,
 // zeby wymusic swiezy install (chroni przed 'zablokowana' stara wersja).
-const CACHE = 'rdzen-v2';
-const ASSETS = ['/rdze-app/', '/rdze-app/index.html', '/rdze-app/manifest.json'];
+const CACHE = 'rdzen-v3';
 const NOTIF_LOG_CACHE = 'rdzen-notif-log';
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).catch(() => undefined),
-  );
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
@@ -26,27 +22,18 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
 
-  // Powloka appki (nawigacja / index.html): ZAWSZE najpierw siec, zeby
-  // dostac najswiezsza wersje wskazujaca na aktualne, zahashowane pliki
-  // JS/CSS. Bez tego appka na telefonie nigdy sie nie aktualizuje - stara
-  // zbuforowana strona zawsze wskazywala na stare bundle'e. Cache jest
-  // tylko fallbackiem, gdy nie ma sieci.
+  // Powloka appki (nawigacja / index.html): NIGDY nie przechodzi przez SW.
+  // To byla przyczyna, ze appka na telefonie nie chciala sie aktualizowac
+  // mimo poprzednich poprawek - nawet 'network-first' w SW wymaga, zeby
+  // przegladarka najpierw zauwazyla NOWA wersje SW, co bywa opoznione.
+  // Pomijajac SW dla nawigacji calkowicie, przegladarka zawsze pobiera
+  // index.html normalnie przez siec (z jej wlasnym, krotkim cache HTTP),
+  // wiec nowy build jest widoczny natychmiast po odswiezeniu.
   const isShell =
     request.mode === 'navigate' ||
     request.url.endsWith('/index.html') ||
     request.url.endsWith('/rdze-app/');
-  if (isShell) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => caches.match(request)),
-    );
-    return;
-  }
+  if (isShell) return;
 
   // Zahashowane statyczne assety (np. /assets/index-XXXX.js) sa niezmienne
   // pod danym URL-em - cache-first jest tu bezpieczny i szybszy.
