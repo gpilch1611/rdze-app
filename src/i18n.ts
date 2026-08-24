@@ -21,6 +21,10 @@ export type Dict = {
   timelineLabel: string;
   breathing478: string;
   breathingBox: string;
+  kegelNormal: string;
+  kegelReverse: string;
+  breathingCalm: string;
+  profileTitle: string;
   breathingArousal: string;
   wimHof: string;
   bodyScan: string;
@@ -173,6 +177,7 @@ export type Dict = {
   onboardingChoose: string;
   onboardingDifficulty: string;
   onboardingBegin: string;
+  onboardingPickOne: string;
   difficultyBeginner: string;
   difficultyIntermediate: string;
   difficultyAdvanced: string;
@@ -218,6 +223,10 @@ export const translations: Record<Lang, Dict> = {
     timelineLabel: 'Kiedy efekty?',
     breathing478: 'Oddech 4-7-8',
     breathingBox: 'Oddech kwadratowy',
+    kegelNormal: 'Kegiel',
+    kegelReverse: 'Odwrotny Kegiel',
+    breathingCalm: 'Oddech uspokajający',
+    profileTitle: 'Profil',
     breathingArousal: 'Oddech i pobudzenie',
     wimHof: 'Metoda Wima Hofa',
     bodyScan: 'Skan ciała',
@@ -365,6 +374,7 @@ export const translations: Record<Lang, Dict> = {
     onboardingChoose: 'Co chcesz trenować?',
     onboardingDifficulty: 'Poziom zaawansowania',
     onboardingBegin: 'Zaczynam',
+    onboardingPickOne: 'Wybierz przynajmniej jeden trening, żeby kontynuować.',
     difficultyBeginner: 'Początkujący',
     difficultyIntermediate: 'Średniozaawansowany',
     difficultyAdvanced: 'Zaawansowany',
@@ -406,6 +416,10 @@ export const translations: Record<Lang, Dict> = {
     timelineLabel: 'When to expect results?',
     breathing478: '4-7-8 Breathing',
     breathingBox: 'Box Breathing',
+    kegelNormal: 'Kegel',
+    kegelReverse: 'Reverse Kegel',
+    breathingCalm: 'Calming Breath',
+    profileTitle: 'Profile',
     breathingArousal: 'Arousal Breathing',
     wimHof: 'Wim Hof Method',
     bodyScan: 'Body Scan',
@@ -553,6 +567,7 @@ export const translations: Record<Lang, Dict> = {
     onboardingChoose: 'What do you want to train?',
     onboardingDifficulty: 'Skill level',
     onboardingBegin: "Let's go",
+    onboardingPickOne: 'Pick at least one training to continue.',
     difficultyBeginner: 'Beginner',
     difficultyIntermediate: 'Intermediate',
     difficultyAdvanced: 'Advanced',

@@ -44,7 +44,7 @@ import { loadData as loadFromDB, saveData as saveToDB } from './storage';
 import { WORKOUTS, getWorkoutById, type Workout } from './workouts';
 import { WORKOUT_EDUCATION } from './workoutEducation';
 
-type View = 'today' | 'progress' | 'journal' | 'library';
+type View = 'today' | 'progress' | 'journal' | 'library' | 'profile';
 type Theme = 'dark' | 'light';
 type KegelMode = 'normal' | 'reverse';
 type Session = {
@@ -421,7 +421,13 @@ function App() {
           </div>
           <span>{t.brand}</span>
         </div>
-        <div className="profile-card">
+        <button
+          className="profile-card"
+          onClick={() => {
+            setView('profile');
+            setMenuOpen(false);
+          }}
+        >
           <div className="avatar">M</div>
           <div>
             <strong>{t.yourRhythm}</strong>
@@ -430,7 +436,7 @@ function App() {
             </span>
           </div>
           <ChevronRight size={16} />
-        </div>
+        </button>
         <nav>
           <p className="nav-label">{t.menu}</p>
           <NavItem
@@ -452,15 +458,6 @@ function App() {
             }}
           />
           <NavItem
-            active={view === 'journal'}
-            icon={<Moon size={18} />}
-            label={t.journal}
-            onClick={() => {
-              setView('journal');
-              setMenuOpen(false);
-            }}
-          />
-          <NavItem
             active={view === 'library'}
             icon={<Compass size={18} />}
             label={t.library}
@@ -471,9 +468,6 @@ function App() {
           />
         </nav>
         <div className="sidebar-footer">
-          <button className="quiet-link" onClick={() => setShowBackup(true)}>
-            <Download size={16} /> {t.backupTitle}
-          </button>
           <div className="privacy-note">
             <ShieldCheck size={16} />
             <span>{t.privacyNote}</span>
@@ -493,7 +487,13 @@ function App() {
           <div className="topbar-context">
             <span className="eyebrow">{formatTodayDate(lang)}</span>
             <h1>
-              {view === 'today' ? t.today : view === 'progress' ? t.progress : t.journal}
+              {view === 'today'
+                ? t.today
+                : view === 'progress'
+                ? t.progress
+                : view === 'library'
+                ? t.library
+                : t.profileTitle}
             </h1>
           </div>
           <div className="topbar-actions">
@@ -554,7 +554,7 @@ function App() {
             onFourSevenEight={() => setFourSevenEightOpen(true)}
             onBoxBreathing={() => setBoxBreathingOpen(true)}
             onGrounding={() => setGroundingOpen(true)}
-            onJournal={() => setView('journal')}
+            onJournal={() => setView('profile')}
           />
         )}
         {view === 'library' && (
@@ -578,11 +578,16 @@ function App() {
             sessions={data.sessions}
           />
         )}
-        {view === 'journal' && (
-          <JournalView
+        {view === 'profile' && (
+          <ProfileView
             t={t}
+            streak={streak}
+            profile={data.profile}
             journal={data.journal}
-            onSave={saveJournal}
+            onSaveJournal={saveJournal}
+            onOpenBackup={() => setShowBackup(true)}
+            onOpenWorkout={(id) => setLibraryDetail(id)}
+            onGoToLibrary={() => setView('library')}
           />
         )}
       </main>
@@ -744,16 +749,17 @@ function OnboardingModal({
   t: Dict;
   onComplete: (profile: { selectedWorkouts: string[]; difficulty: Difficulty }) => void;
 }) {
-  const [choice, setChoice] = useState<'kegel' | 'breath' | 'both'>('both');
-  const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
+  const [wantsKegel, setWantsKegel] = useState(false);
+  const [wantsBreath, setWantsBreath] = useState(false);
+  const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
 
-  const workouts = choice === 'kegel'
-    ? ['kegel-normal']
-    : choice === 'breath'
-    ? ['breathing-calm']
-    : ['kegel-normal', 'breathing-calm'];
+  const workouts = [
+    ...(wantsKegel ? ['kegel-normal'] : []),
+    ...(wantsBreath ? ['breathing-calm'] : []),
+  ];
+  const canBegin = workouts.length > 0;
 
-  const diffOptions: { key: 'beginner' | 'intermediate' | 'advanced'; label: string; desc: string }[] = [
+  const diffOptions: { key: Difficulty; label: string; desc: string }[] = [
     { key: 'beginner', label: t.difficultyBeginner, desc: t.difficultyBeginnerDesc },
     { key: 'intermediate', label: t.difficultyIntermediate, desc: t.difficultyIntermediateDesc },
     { key: 'advanced', label: t.difficultyAdvanced, desc: t.difficultyAdvancedDesc },
@@ -768,21 +774,28 @@ function OnboardingModal({
 
         <p className="onboarding-label">{t.onboardingChoose}</p>
         <div className="onboarding-choice">
-          {([
-            { key: 'kegel', label: t.workoutKegel, desc: t.workoutKegelDesc, icon: <Target size={22} /> },
-            { key: 'breath', label: t.workoutBreath, desc: t.workoutBreathDesc, icon: <Wind size={22} /> },
-            { key: 'both', label: t.workoutBoth, desc: t.workoutBothDesc, icon: <Zap size={22} /> },
-          ] as const).map(opt => (
-            <button
-              key={opt.key}
-              className={`choice-card ${choice === opt.key ? 'selected' : ''}`}
-              onClick={() => setChoice(opt.key)}
-            >
-              <div className="choice-icon">{opt.icon}</div>
-              <strong>{opt.label}</strong>
-              <span>{opt.desc}</span>
-            </button>
-          ))}
+          <button
+            className={`choice-card ${wantsKegel ? 'selected' : ''}`}
+            onClick={() => setWantsKegel((v) => !v)}
+            aria-pressed={wantsKegel}
+          >
+            <div className="choice-icon">
+              {wantsKegel ? <Check size={22} /> : <Target size={22} />}
+            </div>
+            <strong>{t.workoutKegel}</strong>
+            <span>{t.workoutKegelDesc}</span>
+          </button>
+          <button
+            className={`choice-card ${wantsBreath ? 'selected' : ''}`}
+            onClick={() => setWantsBreath((v) => !v)}
+            aria-pressed={wantsBreath}
+          >
+            <div className="choice-icon">
+              {wantsBreath ? <Check size={22} /> : <Wind size={22} />}
+            </div>
+            <strong>{t.workoutBreath}</strong>
+            <span>{t.workoutBreathDesc}</span>
+          </button>
         </div>
 
         <p className="onboarding-label">{t.onboardingDifficulty}</p>
@@ -799,10 +812,16 @@ function OnboardingModal({
           ))}
         </div>
 
+        {!canBegin && (
+          <p className="subtle" style={{ marginTop: 12, marginBottom: 0 }}>
+            {t.onboardingPickOne}
+          </p>
+        )}
         <button
           className="primary-button full"
-          style={{ marginTop: 28 }}
-          onClick={() => onComplete({ selectedWorkouts: workouts, difficulty })}
+          style={{ marginTop: 20 }}
+          disabled={!canBegin}
+          onClick={() => canBegin && onComplete({ selectedWorkouts: workouts, difficulty })}
         >
           {t.onboardingBegin} <ChevronRight size={17} />
         </button>
@@ -907,11 +926,30 @@ function TodayView({
   const show478 = selectedWorkouts.includes('breathing-4-7-8');
   const showBox = selectedWorkouts.includes('breathing-box');
   const sessionCount = (showKegel ? 1 : 0) + (showBreath ? 1 : 0) + (show478 ? 1 : 0) + (showBox ? 1 : 0);
+  const showAnyBreath = showBreath || show478 || showBox;
   const doneCount =
     (showKegel && kegelDone ? 1 : 0) +
     (showBreath && breathingDone ? 1 : 0) +
     (show478 && fourSevenEightDone ? 1 : 0) +
     (showBox && boxBreathingDone ? 1 : 0);
+  const heroOnClick = showKegel
+    ? onKegel
+    : showBreath
+    ? onBreathing
+    : show478
+    ? onFourSevenEight
+    : showBox
+    ? onBoxBreathing
+    : onKegel;
+  const heroDone = showKegel
+    ? kegelDone
+    : showBreath
+    ? breathingDone
+    : show478
+    ? fourSevenEightDone
+    : showBox
+    ? boxBreathingDone
+    : false;
   return (
     <div className="page animate-in">
       <section className="welcome-row">
@@ -940,8 +978,8 @@ function TodayView({
             <em>{t.heroLine2}</em>
           </h3>
           <p>{t.heroSub}</p>
-          <button className="primary-button" onClick={onKegel}>
-            {kegelDone ? (
+          <button className="primary-button" onClick={heroOnClick}>
+            {heroDone ? (
               <>
                 <Check size={17} /> {t.sessionDone}
               </>
@@ -1038,38 +1076,40 @@ function TodayView({
       </section>
 
       <section className="bottom-grid">
-        <div className="insight-card">
-          <div className="card-heading">
-            <div className="mini-icon">
-              <BarChart3 size={17} />
-            </div>
-            <div>
-              <span className="eyebrow">{t.yourProgress}</span>
-              <h4>{t.breathTrack}</h4>
-            </div>
-            <button className="text-button">
-              {t.details} <ArrowRight size={15} />
-            </button>
-          </div>
-          <div className="progress-row">
-            <div className="level-badge">{breathLevel}</div>
-            <div className="progress-main">
-              <div className="progress-meta">
-                <strong>{pick(BREATH_NAMES[breathLevel - 1], lang)}</strong>
-                <span>
-                  {breathingTotal} / {breathNext} {t.minTotal}
-                </span>
+        {showAnyBreath && (
+          <div className="insight-card">
+            <div className="card-heading">
+              <div className="mini-icon">
+                <BarChart3 size={17} />
               </div>
-              <div className="progress-track">
-                <span
-                  style={{
-                    width: `${Math.min(100, Math.max(8, (breathingTotal / breathNext) * 100))}%`,
-                  }}
-                />
+              <div>
+                <span className="eyebrow">{t.yourProgress}</span>
+                <h4>{t.breathTrack}</h4>
+              </div>
+              <button className="text-button">
+                {t.details} <ArrowRight size={15} />
+              </button>
+            </div>
+            <div className="progress-row">
+              <div className="level-badge">{breathLevel}</div>
+              <div className="progress-main">
+                <div className="progress-meta">
+                  <strong>{pick(BREATH_NAMES[breathLevel - 1], lang)}</strong>
+                  <span>
+                    {breathingTotal} / {breathNext} {t.minTotal}
+                  </span>
+                </div>
+                <div className="progress-track">
+                  <span
+                    style={{
+                      width: `${Math.min(100, Math.max(8, (breathingTotal / breathNext) * 100))}%`,
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
         <div className="journal-card">
           <div className="journal-icon">
             <Moon size={19} />
@@ -1556,6 +1596,84 @@ function LibraryDetailModal({
           </>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function ProfileView({
+  t,
+  streak,
+  profile,
+  journal,
+  onSaveJournal,
+  onOpenBackup,
+  onOpenWorkout,
+  onGoToLibrary,
+}: {
+  t: Dict;
+  streak: number;
+  profile: Profile;
+  journal: JournalEntry[];
+  onSaveJournal: (entry: JournalEntry) => void;
+  onOpenBackup: () => void;
+  onOpenWorkout: (id: string) => void;
+  onGoToLibrary: () => void;
+}) {
+  const activeWorkouts = WORKOUTS.filter((w) => profile.selectedWorkouts.includes(w.id));
+  const diffLabel: Record<Difficulty, string> = {
+    beginner: t.difficultyBeginner,
+    intermediate: t.difficultyIntermediate,
+    advanced: t.difficultyAdvanced,
+  };
+
+  return (
+    <div className="page animate-in">
+      <section className="welcome-row">
+        <div>
+          <p className="eyebrow">{t.profileTitle}</p>
+          <h2>{t.yourRhythm}</h2>
+          <p className="subtle">
+            {streak} {t.dayStreak}
+          </p>
+        </div>
+      </section>
+
+      <div className="section-heading">
+        <h3>{t.settingsTrainings}</h3>
+        <button className="text-button" onClick={onGoToLibrary}>
+          {t.library} <ArrowRight size={15} />
+        </button>
+      </div>
+      {activeWorkouts.length === 0 ? (
+        <p className="subtle" style={{ margin: '4px 0 24px' }}>{t.noSessionsYet}</p>
+      ) : (
+        <div className="breakdown-list" style={{ marginBottom: 28 }}>
+          {activeWorkouts.map((w) => (
+            <button
+              key={w.id}
+              className="breakdown-row"
+              style={{ width: '100%', textAlign: 'left', border: 0, background: 'transparent', cursor: 'pointer' }}
+              onClick={() => onOpenWorkout(w.id)}
+            >
+              <div className="breakdown-icon">{workoutIcon(w.icon, 16)}</div>
+              <span className="breakdown-name">{t[w.nameKey as keyof Dict] as string}</span>
+              <span className="breakdown-stat">{diffLabel[getWorkoutDifficulty(profile, w.id)]}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="section-heading">
+        <h3>{t.backupTitle}</h3>
+      </div>
+      <button className="ghost-button full" style={{ marginBottom: 28 }} onClick={onOpenBackup}>
+        <Download size={16} /> {t.backupTitle}
+      </button>
+
+      <div className="section-heading">
+        <h3>{t.journal}</h3>
+      </div>
+      <JournalView t={t} journal={journal} onSave={onSaveJournal} />
     </div>
   );
 }

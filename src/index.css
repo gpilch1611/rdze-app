@@ -131,9 +131,10 @@ button { cursor: pointer; }
 .sidebar { width: 246px; border-right: 1px solid var(--border-soft); padding: 32px 18px 24px; display: flex; flex-direction: column; flex-shrink: 0; background: var(--bg-sidebar); }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 12px; font: 800 23px Manrope, sans-serif; letter-spacing: -.8px; color: var(--text-heading); }
 .brand-mark { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); }
-.profile-card { display: flex; align-items: center; gap: 10px; padding: 15px 11px; margin: 42px 0 32px; border: 1px solid var(--border-soft); border-radius: 14px; background: var(--bg-surface); color: var(--text-tertiary); }
-.avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--on-accent); background: var(--accent-teal); font-weight: 700; font-size: 13px; }
-.profile-card div:nth-child(2) { display: flex; flex: 1; flex-direction: column; gap: 3px; }
+.profile-card { display: flex; align-items: center; gap: 10px; padding: 15px 11px; margin: 42px 0 32px; border: 1px solid var(--border-soft); border-radius: 14px; background: var(--bg-surface); color: var(--text-tertiary); width: 100%; text-align: left; cursor: pointer; transition: .2s; font: inherit; }
+.profile-card:hover { border-color: var(--border-hover); background: var(--bg-hover); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--on-accent); background: var(--accent-teal); font-weight: 700; font-size: 13px; flex-shrink: 0; }
+.profile-card > div:not(.avatar) { display: flex; flex: 1; flex-direction: column; gap: 3px; }
 .profile-card strong { font-size: 13px; color: var(--text-primary); }
 .profile-card span { font-size: 11px; }
 .nav-label, .eyebrow { color: var(--text-secondary); font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
@@ -355,7 +356,7 @@ button { cursor: pointer; }
 .save-button { width: 100%; }
 .full { width: 100%; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: var(--backdrop); backdrop-filter: blur(7px); }
-.breath-modal { width: min(100%, 440px); position: relative; padding: 38px; border: 1px solid var(--border-teal); border-radius: 20px; background: var(--bg-modal); text-align: center; box-shadow: var(--shadow-modal); }
+.breath-modal { width: min(100%, 440px); position: relative; padding: 38px; border: 1px solid var(--border-teal); border-radius: 20px; background: var(--bg-modal); text-align: center; box-shadow: var(--shadow-modal); max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .close-button { position: absolute; right: 17px; top: 17px; display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid var(--border-teal); border-radius: 50%; color: var(--text-secondary); background: transparent; }
 .breath-modal h2 { font: 700 25px Manrope; letter-spacing: -.8px; margin: 10px 0 6px; color: var(--text-heading); }
 .duration-options { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin: 28px 0; }
