@@ -27,7 +27,18 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/rdze-app/sw.js', { scope: '/rdze-app/' }).catch(() => undefined);
+          navigator.serviceWorker
+            .register('/rdze-app/sw.js', { scope: '/rdze-app/' })
+            .then((reg) => {
+              // Nie czekamy biernie az przegladarka sama zauwazy nowa wersje
+              // (bywa leniwa, sprawdza raz na kilkanascie godzin) - wymuszamy
+              // sprawdzenie teraz i za kazdym powrotem do appki.
+              reg.update();
+              document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') reg.update();
+              });
+            })
+            .catch(() => undefined);
         });
         // Gdy nowa wersja Service Workera przejmie kontrole (po deployu),
         // odswiez strone automatycznie - bez tego appka na telefonie
