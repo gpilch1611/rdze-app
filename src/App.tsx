@@ -25,6 +25,7 @@ import {
   Target,
   Timer,
   Upload,
+  UserRound,
   Wind,
   X,
   Zap,
@@ -76,6 +77,60 @@ type Profile = {
 // potem spada do starej globalnej wartosci (migracja), w ostatecznosci 'beginner'.
 function getWorkoutDifficulty(profile: Profile, workoutId: string): Difficulty {
   return profile.workoutDifficulty?.[workoutId] ?? profile.difficulty ?? 'beginner';
+}
+
+// Jedno zrodlo prawdy dla parametrow kazdego poziomu trudnosci - uzywane
+// zarowno przez modaly treningow (faktyczna logika sesji) jak i podglad w
+// Bibliotece (getDifficultySpecs), zeby liczby nigdy sie nie rozjechaly.
+const KEGEL_DIFFICULTY: Record<Difficulty, { hold: number; reps: number }> = {
+  beginner: { hold: 3, reps: 8 },
+  intermediate: { hold: 4, reps: 10 },
+  advanced: { hold: 5, reps: 12 },
+};
+const CYCLE_DIFFICULTY: Record<Difficulty, number> = { beginner: 4, intermediate: 6, advanced: 8 };
+const BREATHING_CALM_MINUTES: Record<Difficulty, number> = { beginner: 2, intermediate: 3, advanced: 5 };
+const FOUR_SEVEN_EIGHT_CYCLE_LEN = 19; // 4s wdech + 7s zatrzymanie + 8s wydech
+const BOX_CYCLE_LEN = 16; // 4 fazy po 4s
+
+function formatDuration(totalSeconds: number, lang: Lang): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  if (m === 0) return lang === 'pl' ? `${s} s` : `${s}s`;
+  if (s === 0) return lang === 'pl' ? `${m} min` : `${m} min`;
+  return lang === 'pl' ? `${m} min ${s} s` : `${m} min ${s}s`;
+}
+
+// Konkretny, policzalny opis co realnie zmienia sie w danym treningu na
+// danym poziomie trudnosci - bez ogolnikow typu 'delikatne tempo'.
+function getDifficultySpecs(workoutId: string, difficulty: Difficulty, lang: Lang): string {
+  if (workoutId === 'kegel-normal' || workoutId === 'kegel-reverse') {
+    const { hold, reps } = KEGEL_DIFFICULTY[difficulty];
+    const total = hold * 2 * reps;
+    return lang === 'pl'
+      ? `${reps} powtórzeń × ${hold}s napięcia — łącznie ${formatDuration(total, lang)}`
+      : `${reps} reps × ${hold}s hold — ${formatDuration(total, lang)} total`;
+  }
+  if (workoutId === 'breathing-4-7-8') {
+    const cycles = CYCLE_DIFFICULTY[difficulty];
+    const total = cycles * FOUR_SEVEN_EIGHT_CYCLE_LEN;
+    return lang === 'pl'
+      ? `${cycles} cykli (4-7-8s) — łącznie ${formatDuration(total, lang)}`
+      : `${cycles} cycles (4-7-8s) — ${formatDuration(total, lang)} total`;
+  }
+  if (workoutId === 'breathing-box') {
+    const cycles = CYCLE_DIFFICULTY[difficulty];
+    const total = cycles * BOX_CYCLE_LEN;
+    return lang === 'pl'
+      ? `${cycles} cykli (4×4s) — łącznie ${formatDuration(total, lang)}`
+      : `${cycles} cycles (4×4s) — ${formatDuration(total, lang)} total`;
+  }
+  if (workoutId === 'breathing-calm') {
+    const mins = BREATHING_CALM_MINUTES[difficulty];
+    return lang === 'pl'
+      ? `Sugerowany czas: ${mins} min (możesz zmienić przed startem sesji)`
+      : `Suggested duration: ${mins} min (adjustable before you start)`;
+  }
+  return '';
 }
 
 type StoredData = {
@@ -428,7 +483,9 @@ function App() {
             setMenuOpen(false);
           }}
         >
-          <div className="avatar">M</div>
+          <div className="avatar">
+            <UserRound size={16} />
+          </div>
           <div>
             <strong>{t.yourRhythm}</strong>
             <span>
@@ -445,15 +502,6 @@ function App() {
             label={t.today}
             onClick={() => {
               setView('today');
-              setMenuOpen(false);
-            }}
-          />
-          <NavItem
-            active={view === 'progress'}
-            icon={<BarChart3 size={18} />}
-            label={t.progress}
-            onClick={() => {
-              setView('progress');
               setMenuOpen(false);
             }}
           />
@@ -487,13 +535,7 @@ function App() {
           <div className="topbar-context">
             <span className="eyebrow">{formatTodayDate(lang)}</span>
             <h1>
-              {view === 'today'
-                ? t.today
-                : view === 'progress'
-                ? t.progress
-                : view === 'library'
-                ? t.library
-                : t.profileTitle}
+              {view === 'today' ? t.today : view === 'library' ? t.library : t.profileTitle}
             </h1>
           </div>
           <div className="topbar-actions">
@@ -565,26 +607,18 @@ function App() {
             onOpenDetail={(id) => setLibraryDetail(id)}
           />
         )}
-        {view === 'progress' && (
-          <ProgressView
+        {view === 'profile' && (
+          <ProfileView
             t={t}
             lang={lang}
             streak={streak}
+            profile={data.profile}
             kegelLevel={kegelLevel}
             kegelProgress={kegelProgress}
             breathLevel={breathLevel}
             breathProgress={breathProgress}
             breathingTotal={breathingTotal}
             sessions={data.sessions}
-          />
-        )}
-        {view === 'profile' && (
-          <ProfileView
-            t={t}
-            streak={streak}
-            profile={data.profile}
-            journal={data.journal}
-            onSaveJournal={saveJournal}
             onOpenBackup={() => setShowBackup(true)}
             onOpenWorkout={(id) => setLibraryDetail(id)}
             onGoToLibrary={() => setView('library')}
@@ -649,14 +683,14 @@ function App() {
           t={t}
           existing={data.journal.find((j) => j.date === todayKey)}
           onSkip={() => setShowQuickLog(false)}
-          onSave={(tension, mood) => {
+          onSave={(tension, mood, control) => {
             const existing = data.journal.find((j) => j.date === todayKey);
             saveJournal({
               date: todayKey,
               tension,
               mood,
               note: existing?.note ?? '',
-              control: existing?.control,
+              control: control ?? existing?.control,
             });
             setShowQuickLog(false);
           }}
@@ -1175,110 +1209,6 @@ function SessionCard({
   );
 }
 
-function ProgressView({
-  t,
-  lang,
-  streak,
-  kegelLevel,
-  kegelProgress,
-  breathLevel,
-  breathProgress,
-  breathingTotal,
-  sessions,
-}: {
-  t: Dict;
-  lang: Lang;
-  streak: number;
-  kegelLevel: number;
-  kegelProgress: number;
-  breathLevel: number;
-  breathProgress: number;
-  breathingTotal: number;
-  sessions: Session[];
-}) {
-  const monthly = useMemo(() => computeMonthly(sessions, lang), [sessions, lang]);
-  return (
-    <div className="page animate-in">
-      <div className="progress-intro">
-        <span className="eyebrow">{t.onlyYou}</span>
-        <h2>{t.progressTitle}</h2>
-        <p className="subtle">{t.progressSub}</p>
-      </div>
-      <div className="stats-strip">
-        <div>
-          <Flame size={18} />
-          <strong>{streak}</strong>
-          <span>{t.dayStreakUnit}</span>
-        </div>
-        <div>
-          <Timer size={18} />
-          <strong>{breathingTotal}</strong>
-          <span>{t.breathMinutes}</span>
-        </div>
-        <div>
-          <Sparkles size={18} />
-          <strong>{Math.max(kegelLevel, breathLevel)}</strong>
-          <span>{t.overallLevel}</span>
-        </div>
-      </div>
-      <div className="tracks">
-        <TrackCard
-          typeLabel={`${t.track} ${t.kegel}`}
-          level={kegelLevel}
-          name={pick(KEGEL_LEVELS[kegelLevel - 1], lang)}
-          description={pick(KEGEL_DESC[kegelLevel - 1], lang)}
-          progress={kegelProgress}
-          accent="amber"
-          meta={`${kegelLevel} ${t.of9}`}
-        />
-        <TrackCard
-          typeLabel={`${t.track} ${t.breathLabel}`}
-          level={breathLevel}
-          name={pick(BREATH_NAMES[breathLevel - 1], lang)}
-          description={pick(BREATH_DESC[breathLevel - 1], lang)}
-          progress={breathProgress}
-          accent="teal"
-          meta={`${breathingTotal} ${t.minTotal}`}
-        />
-      </div>
-      <div className="compare-card">
-        <div>
-          <span className="eyebrow">{t.monthlyView}</span>
-          <h3>
-            {t.youNowVs} <span>{t.vs}</span> {monthly.label}
-          </h3>
-        </div>
-        <div className="compare-values">
-          <div>
-            <span>{t.streak}</span>
-            <strong>
-              {streak} → {monthly.streak}
-            </strong>
-            <small>{t.buildingRhythm}</small>
-          </div>
-          <div>
-            <span>{t.breathLabel}</span>
-            <strong>
-              {breathingTotal} → {monthly.breath}
-            </strong>
-            <small>{t.everyMinute}</small>
-          </div>
-        </div>
-      </div>
-
-      <div className="section-heading" style={{ marginTop: 34 }}>
-        <h3>{t.activityTitle}</h3>
-      </div>
-      <ActivityHeatmap sessions={sessions} t={t} />
-
-      <div className="section-heading">
-        <h3>{t.timePerWorkout}</h3>
-      </div>
-      <WorkoutBreakdown sessions={sessions} t={t} />
-    </div>
-  );
-}
-
 function ActivityHeatmap({ sessions, t }: { sessions: Session[]; t: Dict }) {
   const WEEKS = 14;
   const countByDate = new Map<string, number>();
@@ -1528,9 +1458,9 @@ function LibraryDetailModal({
   if (!workout) return null;
 
   const diffOptions: { key: Difficulty; label: string; desc: string }[] = [
-    { key: 'beginner', label: t.difficultyBeginner, desc: t.difficultyBeginnerDesc },
-    { key: 'intermediate', label: t.difficultyIntermediate, desc: t.difficultyIntermediateDesc },
-    { key: 'advanced', label: t.difficultyAdvanced, desc: t.difficultyAdvancedDesc },
+    { key: 'beginner', label: t.difficultyBeginner, desc: getDifficultySpecs(workoutId, 'beginner', lang) },
+    { key: 'intermediate', label: t.difficultyIntermediate, desc: getDifficultySpecs(workoutId, 'intermediate', lang) },
+    { key: 'advanced', label: t.difficultyAdvanced, desc: getDifficultySpecs(workoutId, 'advanced', lang) },
   ];
 
   return (
@@ -1602,19 +1532,29 @@ function LibraryDetailModal({
 
 function ProfileView({
   t,
+  lang,
   streak,
   profile,
-  journal,
-  onSaveJournal,
+  kegelLevel,
+  kegelProgress,
+  breathLevel,
+  breathProgress,
+  breathingTotal,
+  sessions,
   onOpenBackup,
   onOpenWorkout,
   onGoToLibrary,
 }: {
   t: Dict;
+  lang: Lang;
   streak: number;
   profile: Profile;
-  journal: JournalEntry[];
-  onSaveJournal: (entry: JournalEntry) => void;
+  kegelLevel: number;
+  kegelProgress: number;
+  breathLevel: number;
+  breathProgress: number;
+  breathingTotal: number;
+  sessions: Session[];
   onOpenBackup: () => void;
   onOpenWorkout: (id: string) => void;
   onGoToLibrary: () => void;
@@ -1625,6 +1565,7 @@ function ProfileView({
     intermediate: t.difficultyIntermediate,
     advanced: t.difficultyAdvanced,
   };
+  const monthly = useMemo(() => computeMonthly(sessions, lang), [sessions, lang]);
 
   return (
     <div className="page animate-in">
@@ -1637,6 +1578,80 @@ function ProfileView({
           </p>
         </div>
       </section>
+
+      <div className="stats-strip">
+        <div>
+          <Flame size={18} />
+          <strong>{streak}</strong>
+          <span>{t.dayStreakUnit}</span>
+        </div>
+        <div>
+          <Timer size={18} />
+          <strong>{breathingTotal}</strong>
+          <span>{t.breathMinutes}</span>
+        </div>
+        <div>
+          <Sparkles size={18} />
+          <strong>{Math.max(kegelLevel, breathLevel)}</strong>
+          <span>{t.overallLevel}</span>
+        </div>
+      </div>
+
+      <div className="tracks">
+        <TrackCard
+          typeLabel={`${t.track} ${t.kegel}`}
+          level={kegelLevel}
+          name={pick(KEGEL_LEVELS[kegelLevel - 1], lang)}
+          description={pick(KEGEL_DESC[kegelLevel - 1], lang)}
+          progress={kegelProgress}
+          accent="amber"
+          meta={`${kegelLevel} ${t.of9}`}
+        />
+        <TrackCard
+          typeLabel={`${t.track} ${t.breathLabel}`}
+          level={breathLevel}
+          name={pick(BREATH_NAMES[breathLevel - 1], lang)}
+          description={pick(BREATH_DESC[breathLevel - 1], lang)}
+          progress={breathProgress}
+          accent="teal"
+          meta={`${breathingTotal} ${t.minTotal}`}
+        />
+      </div>
+
+      <div className="compare-card">
+        <div>
+          <span className="eyebrow">{t.monthlyView}</span>
+          <h3>
+            {t.youNowVs} <span>{t.vs}</span> {monthly.label}
+          </h3>
+        </div>
+        <div className="compare-values">
+          <div>
+            <span>{t.streak}</span>
+            <strong>
+              {streak} → {monthly.streak}
+            </strong>
+            <small>{t.buildingRhythm}</small>
+          </div>
+          <div>
+            <span>{t.breathLabel}</span>
+            <strong>
+              {breathingTotal} → {monthly.breath}
+            </strong>
+            <small>{t.everyMinute}</small>
+          </div>
+        </div>
+      </div>
+
+      <div className="section-heading" style={{ marginTop: 34 }}>
+        <h3>{t.activityTitle}</h3>
+      </div>
+      <ActivityHeatmap sessions={sessions} t={t} />
+
+      <div className="section-heading">
+        <h3>{t.timePerWorkout}</h3>
+      </div>
+      <WorkoutBreakdown sessions={sessions} t={t} />
 
       <div className="section-heading">
         <h3>{t.settingsTrainings}</h3>
@@ -1669,114 +1684,6 @@ function ProfileView({
       <button className="ghost-button full" style={{ marginBottom: 28 }} onClick={onOpenBackup}>
         <Download size={16} /> {t.backupTitle}
       </button>
-
-      <div className="section-heading">
-        <h3>{t.journal}</h3>
-      </div>
-      <JournalView t={t} journal={journal} onSave={onSaveJournal} />
-    </div>
-  );
-}
-
-function JournalView({
-  t,
-  journal,
-  onSave,
-}: {
-  t: Dict;
-  journal: JournalEntry[];
-  onSave: (entry: JournalEntry) => void;
-}) {
-  const today = journal.find((j) => j.date === todayKey);
-  const isSunday = new Date().getDay() === 0;
-  const [tension, setTension] = useState(today?.tension ?? 3);
-  const [mood, setMood] = useState(today?.mood ?? 3);
-  const [note, setNote] = useState(today?.note ?? '');
-  const [control, setControl] = useState(today?.control ?? 3);
-  const [saved, setSaved] = useState(false);
-
-  const save = () => {
-    onSave({
-      date: todayKey,
-      tension,
-      mood,
-      note,
-      control: isSunday ? control : undefined,
-    });
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2200);
-  };
-
-  return (
-    <div className="page journal-page animate-in">
-      <div className="progress-intro">
-        <span className="eyebrow">{t.shortClear}</span>
-        <h2>{t.journalTitle}</h2>
-        <p className="subtle">{t.journalSub}</p>
-      </div>
-      <div className="journal-form">
-        <Slider
-          label={t.tensionLevel}
-          value={tension}
-          minLabel={t.loose}
-          maxLabel={t.tight}
-          onChange={setTension}
-        />
-        <Slider
-          label={t.mood}
-          value={mood}
-          minLabel={t.low}
-          maxLabel={t.well}
-          onChange={setMood}
-        />
-        <div className="field-block">
-          <label htmlFor="note">
-            {t.todaySentence} <span>{t.optional}</span>
-          </label>
-          <textarea
-            id="note"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder={t.whatNoticed}
-            rows={4}
-          />
-        </div>
-        {isSunday && (
-          <div className="sunday-box">
-            <div className="sunday-icon">
-              <Sparkles size={17} />
-            </div>
-            <div>
-              <span className="eyebrow">{t.weekSummary}</span>
-              <h4>{t.controlRate}</h4>
-              <p>{t.feedsKegel}</p>
-            </div>
-            <div className="score-control">
-              <button onClick={() => setControl(Math.max(1, control - 1))}>
-                <Minus size={15} />
-              </button>
-              <strong>{control}</strong>
-              <button onClick={() => setControl(Math.min(5, control + 1))}>
-                <Plus size={15} />
-              </button>
-            </div>
-          </div>
-        )}
-        <button
-          className={`primary-button save-button ${saved ? 'saved' : ''}`}
-          onClick={save}
-        >
-          {saved ? (
-            <>
-              <Check size={17} /> {t.saved}
-            </>
-          ) : (
-            <>
-              {t.saveEntry} <ArrowRight size={17} />
-            </>
-          )}
-        </button>
-      </div>
     </div>
   );
 }
@@ -1879,11 +1786,13 @@ function QuickLogModal({
 }: {
   t: Dict;
   existing?: JournalEntry;
-  onSave: (tension: number, mood: number) => void;
+  onSave: (tension: number, mood: number, control?: number) => void;
   onSkip: () => void;
 }) {
   const [tension, setTension] = useState(existing?.tension ?? 3);
   const [mood, setMood] = useState(existing?.mood ?? 3);
+  const [control, setControl] = useState(existing?.control ?? 3);
+  const isSunday = new Date().getDay() === 0;
 
   return (
     <div className="modal-backdrop">
@@ -1906,10 +1815,31 @@ function QuickLogModal({
           maxLabel={t.well}
           onChange={setMood}
         />
+        {isSunday && (
+          <div className="sunday-box">
+            <div className="sunday-icon">
+              <Sparkles size={17} />
+            </div>
+            <div>
+              <span className="eyebrow">{t.weekSummary}</span>
+              <h4>{t.controlRate}</h4>
+              <p>{t.feedsKegel}</p>
+            </div>
+            <div className="score-control">
+              <button onClick={() => setControl(Math.max(1, control - 1))}>
+                <Minus size={15} />
+              </button>
+              <strong>{control}</strong>
+              <button onClick={() => setControl(Math.min(5, control + 1))}>
+                <Plus size={15} />
+              </button>
+            </div>
+          </div>
+        )}
         <button
           className="primary-button full"
           style={{ marginTop: 12 }}
-          onClick={() => onSave(tension, mood)}
+          onClick={() => onSave(tension, mood, isSunday ? control : undefined)}
         >
           <Check size={16} /> {t.saveEntry}
         </button>
@@ -1971,18 +1901,13 @@ function KegelModal({
   onClose: () => void;
   onFinish: (mode: KegelMode) => void;
 }) {
-  const DIFFICULTY_DEFAULTS = {
-    beginner: { hold: 3, reps: 8 },
-    intermediate: { hold: 4, reps: 10 },
-    advanced: { hold: 5, reps: 12 },
-  } as const;
   const [mode, setMode] = useState<KegelMode>('normal');
   const difficulty = mode === 'reverse' ? difficultyReverse : difficultyNormal;
-  const [holdSeconds, setHoldSeconds] = useState<number>(DIFFICULTY_DEFAULTS[difficultyNormal].hold);
+  const [holdSeconds, setHoldSeconds] = useState<number>(KEGEL_DIFFICULTY[difficultyNormal].hold);
   const [stage, setStage] = useState<'setup' | 'ready' | 'running' | 'done'>('setup');
   const [elapsed, setElapsed] = useState(0);
   const PHASE_LEN = holdSeconds;
-  const TOTAL_REPS = DIFFICULTY_DEFAULTS[difficulty].reps;
+  const TOTAL_REPS = KEGEL_DIFFICULTY[difficulty].reps;
   const TOTAL_SECONDS = PHASE_LEN * 2 * TOTAL_REPS;
 
   useEffect(() => {
@@ -2145,7 +2070,7 @@ function BoxBreathingModal({
   onClose: () => void;
   onFinish: (minutes: number) => void;
 }) {
-  const CYCLES = difficulty === 'advanced' ? 8 : difficulty === 'intermediate' ? 6 : 4;
+  const CYCLES = CYCLE_DIFFICULTY[difficulty];
   const PHASE = 4;
   const CYCLE_LEN = PHASE * 4; // wdech, zatrzymaj, wydech, zatrzymaj
   const TOTAL_SECONDS = CYCLE_LEN * CYCLES;
@@ -2250,7 +2175,7 @@ function FourSevenEightModal({
   onClose: () => void;
   onFinish: (minutes: number) => void;
 }) {
-  const CYCLES = difficulty === 'advanced' ? 8 : difficulty === 'intermediate' ? 6 : 4;
+  const CYCLES = CYCLE_DIFFICULTY[difficulty];
   const INHALE = 4;
   const HOLD = 7;
   const EXHALE = 8;
@@ -2353,7 +2278,7 @@ function BreathingModal({
   onClose: () => void;
   onFinish: (minutes: number) => void;
 }) {
-  const [minutes, setMinutes] = useState(difficulty === 'advanced' ? 5 : 2);
+  const [minutes, setMinutes] = useState(BREATHING_CALM_MINUTES[difficulty]);
   const [started, setStarted] = useState(false);
   const [seconds, setSeconds] = useState(0);
 
