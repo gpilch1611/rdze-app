@@ -105,6 +105,15 @@ export type Dict = {
   saveEntry: string;
   quickLogEyebrow: string;
   backupTitle: string;
+  weeklyGoalTitle: string;
+  thisWeek: string;
+  daysUnit: string;
+  weeklyGoalDesc: string;
+  sessionHistoryTitle: string;
+  preferencesTitle: string;
+  soundToggleLabel: string;
+  on: string;
+  off: string;
   backupSubtitle: string;
   backupExport: string;
   backupImport: string;
@@ -156,11 +165,12 @@ export type Dict = {
   finishGrounding: string;
   // notifications
   notifMorning: string;
-  notifDay: string;
-  notifEvening: string;
-  notifSunday: string;
   notifLevelUp: string;
   levelUpToastTitle: string;
+  difficultySuggestTitle: string;
+  difficultySuggestBody: string;
+  difficultySuggestAccept: string;
+  difficultySuggestDismiss: string;
   groundingBreathIntro: string;
   skipBreath: string;
   enableNotifs: string;
@@ -307,6 +317,15 @@ export const translations: Record<Lang, Dict> = {
     saveEntry: 'Zapisz dzisiejszy wpis',
     quickLogEyebrow: 'Po treningu',
     backupTitle: 'Kopia zapasowa',
+    weeklyGoalTitle: 'Cel tygodniowy',
+    thisWeek: 'Ten tydzień',
+    daysUnit: 'dni',
+    weeklyGoalDesc: 'Ile dni w tygodniu chcesz trenować Kegla.',
+    sessionHistoryTitle: 'Historia sesji',
+    preferencesTitle: 'Preferencje',
+    soundToggleLabel: 'Dźwięk podczas treningu',
+    on: 'Włączony',
+    off: 'Wyłączony',
     backupSubtitle: 'Twoje dane są zapisane tylko na tym urządzeniu. Pobierz kopię, żeby nie stracić postępu przy zmianie telefonu lub czyszczeniu danych przeglądarki.',
     backupExport: 'Pobierz kopię danych',
     backupImport: 'Wgraj kopię z pliku',
@@ -354,12 +373,13 @@ export const translations: Record<Lang, Dict> = {
     smell: 'Wąchaj 2 zapachy',
     taste: 'Poczuj 1 smak',
     finishGrounding: 'Zakończ',
-    notifMorning: 'Czas na trening',
-    notifDay: 'Masz 2 minuty? Szybki reset.',
-    notifEvening: 'Wieczorna sesja czeka',
-    notifSunday: 'Podsumowanie tygodnia gotowe',
+    notifMorning: 'Co dziś trenujesz? 👋',
     notifLevelUp: 'Nowy poziom odblokowany',
     levelUpToastTitle: 'Nowy poziom!',
+    difficultySuggestTitle: 'Może czas na wyższy poziom?',
+    difficultySuggestBody: 'Twoja regularność rośnie — sugerujemy poziom "{level}" dla tego treningu. Możesz to zawsze zmienić w Bibliotece.',
+    difficultySuggestAccept: 'Podnieś poziom',
+    difficultySuggestDismiss: 'Zostań przy obecnym',
     groundingBreathIntro: 'Zacznij od uspokojenia oddechu — dopiero potem przejdziemy do uziemienia.',
     skipBreath: 'Przejdź do uziemienia',
     enableNotifs: 'Włącz powiadomienia',
@@ -500,6 +520,15 @@ export const translations: Record<Lang, Dict> = {
     saveEntry: "Save today's entry",
     quickLogEyebrow: 'After training',
     backupTitle: 'Backup',
+    weeklyGoalTitle: 'Weekly goal',
+    thisWeek: 'This week',
+    daysUnit: 'days',
+    weeklyGoalDesc: 'How many days a week you want to train Kegel.',
+    sessionHistoryTitle: 'Session history',
+    preferencesTitle: 'Preferences',
+    soundToggleLabel: 'Sound during training',
+    on: 'On',
+    off: 'Off',
     backupSubtitle: 'Your data is only stored on this device. Download a backup so you don\'t lose your progress if you switch phones or clear browser data.',
     backupExport: 'Download data backup',
     backupImport: 'Restore from file',
@@ -547,12 +576,13 @@ export const translations: Record<Lang, Dict> = {
     smell: 'Smell 2 scents',
     taste: 'Taste 1 thing',
     finishGrounding: 'Finish',
-    notifMorning: 'Time to train',
-    notifDay: 'Got 2 minutes? Quick reset.',
-    notifEvening: 'Evening session is waiting',
-    notifSunday: 'Weekly summary is ready',
+    notifMorning: 'What are you training today? 👋',
     notifLevelUp: 'New level unlocked',
     levelUpToastTitle: 'New level!',
+    difficultySuggestTitle: 'Maybe time to level up?',
+    difficultySuggestBody: 'Your consistency is growing — we suggest "{level}" for this training. You can always change it in the Library.',
+    difficultySuggestAccept: 'Raise the level',
+    difficultySuggestDismiss: 'Keep current',
     groundingBreathIntro: "Start by settling your breath — then we'll move on to grounding.",
     skipBreath: 'Skip to grounding',
     enableNotifs: 'Enable notifications',

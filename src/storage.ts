@@ -9,6 +9,9 @@ export type StoredData = {
     difficulty: 'beginner' | 'intermediate' | 'advanced';
     workoutDifficulty?: Record<string, 'beginner' | 'intermediate' | 'advanced'>;
     hasCompletedOnboarding: boolean;
+    weeklyGoalDays?: number;
+    soundEnabled?: boolean;
+    dismissedDifficultySuggestions?: string[];
   };
   sessions: { type: 'kegel' | 'breathing'; date: string; minutes?: number; mode?: 'normal' | 'reverse'; workoutId?: string }[];
   journal: { date: string; tension: number; mood: number; note: string; control?: number }[];

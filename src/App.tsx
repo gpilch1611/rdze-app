@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Activity,
   ArrowRight,
@@ -26,6 +26,7 @@ import {
   Timer,
   Upload,
   UserRound,
+  Volume2,
   Wind,
   X,
   Zap,
@@ -71,7 +72,27 @@ type Profile = {
   difficulty: Difficulty; // stara wartosc globalna - zachowana dla migracji, nie uzywana do nowych zapisow
   workoutDifficulty?: Record<string, Difficulty>; // poziom per konkretny trening
   hasCompletedOnboarding: boolean;
+  weeklyGoalDays?: number; // ile dni w tygodniu z Kegiem chcesz trenowac (domyslnie 5)
+  soundEnabled?: boolean; // dzwiek przy zmianie fazy oddechu
+  dismissedDifficultySuggestions?: string[]; // ktore sugestie podniesienia poziomu juz odrzucono
 };
+
+const DEFAULT_WEEKLY_GOAL = 5;
+
+// Poziom umiejetnosci (1-9, z regularnosci treningu) to INNY system niz
+// poziom trudnosci sesji (Poczatkujacy/Sredni/Zaawansowany, wybierany
+// recznie). Ta funkcja laczy je: przy odpowiednio wysokim poziomie
+// umiejetnosci SUGERUJEMY wyzszy poziom trudnosci, ale nigdy nie zmieniamy
+// go bez zgody uzytkownika.
+function suggestedDifficultyForLevel(level: number): Difficulty | null {
+  if (level >= 7) return 'advanced';
+  if (level >= 4) return 'intermediate';
+  return null;
+}
+
+function difficultyRank(d: Difficulty): number {
+  return d === 'advanced' ? 2 : d === 'intermediate' ? 1 : 0;
+}
 
 // Zwraca poziom trudnosci dla danego treningu - najpierw sprawdza mape per-trening,
 // potem spada do starej globalnej wartosci (migracja), w ostatecznosci 'beginner'.
@@ -139,20 +160,14 @@ type StoredData = {
   journal: JournalEntry[];
 };
 
-type NotifSlot = 'morning' | 'day' | 'evening' | 'sunday';
+type NotifSlot = 'morning';
 
-const NOTIF_TIMES: { slot: NotifSlot; hour: number; minute: number; sundayOnly?: boolean }[] = [
-  { slot: 'morning', hour: 7, minute: 0 },
-  { slot: 'day', hour: 13, minute: 0 },
-  { slot: 'evening', hour: 20, minute: 0 },
-  { slot: 'sunday', hour: 19, minute: 0, sundayOnly: true },
+const NOTIF_TIMES: { slot: NotifSlot; hour: number; minute: number }[] = [
+  { slot: 'morning', hour: 8, minute: 0 },
 ];
 
-function notifTextFor(slot: NotifSlot, t: Dict): string {
-  if (slot === 'morning') return t.notifMorning;
-  if (slot === 'day') return t.notifDay;
-  if (slot === 'evening') return t.notifEvening;
-  return t.notifSunday;
+function notifTextFor(_slot: NotifSlot, t: Dict): string {
+  return t.notifMorning;
 }
 
 function loadFiredLog(): Record<string, string> {
@@ -257,6 +272,35 @@ function vibrate(pattern: number | number[]) {
   }
 }
 
+// Delikatny dzwiek przy zmianie fazy oddechu - AudioContext tworzony lenistwie
+// (dopiero przy pierwszym uzyciu, zwykle po kliknieciu 'Start' przez uzytkownika,
+// co odblokowuje audio w przegladarce). Cichy sinusoidalny ton, nie plik audio.
+let sharedAudioCtx: AudioContext | null = null;
+
+function playTone(frequency: number, durationMs: number) {
+  try {
+    if (!sharedAudioCtx) {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      sharedAudioCtx = new AudioCtx();
+    }
+    const ctx = sharedAudioCtx;
+    if (ctx.state === 'suspended') ctx.resume();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000);
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start();
+    oscillator.stop(ctx.currentTime + durationMs / 1000);
+  } catch {
+    // brak wsparcia audio - ciche pominiecie
+  }
+}
+
 function App() {
   const [view, setView] = useState<View>('today');
   const [lang, setLang] = useState<Lang>(loadLang);
@@ -275,6 +319,12 @@ function App() {
     () => 'Notification' in window && Notification.permission === 'granted',
   );
   const [levelUpToast, setLevelUpToast] = useState<{ track: 'kegel' | 'breath'; level: number } | null>(null);
+  const [difficultySuggestion, setDifficultySuggestion] = useState<{
+    track: 'kegel' | 'breath';
+    suggested: Difficulty;
+    workoutIds: string[];
+    dismissKey: string;
+  } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [notifFeedback, setNotifFeedback] = useState<'idle' | 'granted' | 'denied'>('idle');
 
@@ -329,11 +379,11 @@ function App() {
   }, [data.sessions]);
 
   const { kegelLevel, kegelProgress } = useMemo(() => {
-    const completedWeeks = countCompletedWeeks(data.sessions, data.journal);
+    const completedWeeks = countCompletedWeeks(data.sessions, data.journal, data.profile.weeklyGoalDays);
     const level = Math.min(9, completedWeeks + 1);
     const progress = Math.min(100, (completedWeeks / 9) * 100);
     return { kegelLevel: level, kegelProgress: progress };
-  }, [data.sessions, data.journal]);
+  }, [data.sessions, data.journal, data.profile.weeklyGoalDays]);
 
   const breathLevel = useMemo(() => {
     const idx = BREATH_LEVELS.findIndex((threshold) => breathingTotal < threshold);
@@ -410,7 +460,6 @@ function App() {
       const log = loadFiredLog();
       let changed = false;
       for (const slotDef of NOTIF_TIMES) {
-        if (slotDef.sundayOnly && now.getDay() !== 0) continue;
         const scheduled = new Date(now);
         scheduled.setHours(slotDef.hour, slotDef.minute, 0, 0);
         const diffMin = (now.getTime() - scheduled.getTime()) / 60000;
@@ -438,23 +487,43 @@ function App() {
   const prevKegelLevel = useRef<number | null>(null);
   const prevBreathLevel = useRef<number | null>(null);
 
+  const maybeSuggestDifficulty = useCallback(
+    (track: 'kegel' | 'breath', level: number) => {
+      const suggested = suggestedDifficultyForLevel(level);
+      if (!suggested) return;
+      const familyIds = data.profile.selectedWorkouts.filter((id) =>
+        track === 'kegel' ? id.startsWith('kegel') : id.startsWith('breathing'),
+      );
+      if (familyIds.length === 0) return;
+      const dismissKey = `${track}-${suggested}`;
+      if (data.profile.dismissedDifficultySuggestions?.includes(dismissKey)) return;
+      const needsBump = familyIds.some(
+        (id) => difficultyRank(getWorkoutDifficulty(data.profile, id)) < difficultyRank(suggested),
+      );
+      if (needsBump) setDifficultySuggestion({ track, suggested, workoutIds: familyIds, dismissKey });
+    },
+    [data.profile],
+  );
+
   useEffect(() => {
     if (prevKegelLevel.current !== null && kegelLevel > prevKegelLevel.current) {
       setLevelUpToast({ track: 'kegel', level: kegelLevel });
       if (navigator.vibrate) navigator.vibrate([80, 40, 80, 40, 160]);
       if (notifEnabled) fireNotification(t.notifLevelUp);
+      maybeSuggestDifficulty('kegel', kegelLevel);
     }
     prevKegelLevel.current = kegelLevel;
-  }, [kegelLevel, notifEnabled, t]);
+  }, [kegelLevel, notifEnabled, t, maybeSuggestDifficulty]);
 
   useEffect(() => {
     if (prevBreathLevel.current !== null && breathLevel > prevBreathLevel.current) {
       setLevelUpToast({ track: 'breath', level: breathLevel });
       if (navigator.vibrate) navigator.vibrate([80, 40, 80, 40, 160]);
       if (notifEnabled) fireNotification(t.notifLevelUp);
+      maybeSuggestDifficulty('breath', breathLevel);
     }
     prevBreathLevel.current = breathLevel;
-  }, [breathLevel, notifEnabled, t]);
+  }, [breathLevel, notifEnabled, t, maybeSuggestDifficulty]);
 
   useEffect(() => {
     if (!levelUpToast) return;
@@ -622,6 +691,12 @@ function App() {
             onOpenBackup={() => setShowBackup(true)}
             onOpenWorkout={(id) => setLibraryDetail(id)}
             onGoToLibrary={() => setView('library')}
+            onSetWeeklyGoal={(days) =>
+              setData((d) => ({ ...d, profile: { ...d.profile, weeklyGoalDays: days } }))
+            }
+            onToggleSound={(enabled) =>
+              setData((d) => ({ ...d, profile: { ...d.profile, soundEnabled: enabled } }))
+            }
           />
         )}
       </main>
@@ -631,6 +706,7 @@ function App() {
           t={t}
           difficultyNormal={getWorkoutDifficulty(data.profile, 'kegel-normal')}
           difficultyReverse={getWorkoutDifficulty(data.profile, 'kegel-reverse')}
+          soundEnabled={data.profile.soundEnabled ?? false}
           onClose={() => setKegelOpen(false)}
           onFinish={(mode) => {
             completeKegel(mode);
@@ -643,6 +719,7 @@ function App() {
         <BreathingModal
           t={t}
           difficulty={getWorkoutDifficulty(data.profile, 'breathing-calm')}
+          soundEnabled={data.profile.soundEnabled ?? false}
           onClose={() => setBreathingOpen(false)}
           onFinish={(minutes) => {
             finishBreathing(minutes, 'breathing-calm');
@@ -655,6 +732,7 @@ function App() {
         <FourSevenEightModal
           t={t}
           difficulty={getWorkoutDifficulty(data.profile, 'breathing-4-7-8')}
+          soundEnabled={data.profile.soundEnabled ?? false}
           onClose={() => setFourSevenEightOpen(false)}
           onFinish={(minutes) => {
             finishBreathing(minutes, 'breathing-4-7-8');
@@ -667,6 +745,7 @@ function App() {
         <BoxBreathingModal
           t={t}
           difficulty={getWorkoutDifficulty(data.profile, 'breathing-box')}
+          soundEnabled={data.profile.soundEnabled ?? false}
           onClose={() => setBoxBreathingOpen(false)}
           onFinish={(minutes) => {
             finishBreathing(minutes, 'breathing-box');
@@ -676,7 +755,11 @@ function App() {
         />
       )}
       {groundingOpen && (
-        <GroundingModal t={t} onClose={() => setGroundingOpen(false)} />
+        <GroundingModal
+          t={t}
+          soundEnabled={data.profile.soundEnabled ?? false}
+          onClose={() => setGroundingOpen(false)}
+        />
       )}
       {showQuickLog && (
         <QuickLogModal
@@ -760,6 +843,74 @@ function App() {
                 lang,
               )}
             </span>
+          </div>
+        </div>
+      )}
+      {difficultySuggestion && (
+        <div className="modal-backdrop">
+          <div className="breath-modal animate-in" style={{ maxWidth: 380 }}>
+            <button
+              className="close-button"
+              onClick={() => {
+                setData((d) => ({
+                  ...d,
+                  profile: {
+                    ...d.profile,
+                    dismissedDifficultySuggestions: [
+                      ...(d.profile.dismissedDifficultySuggestions ?? []),
+                      difficultySuggestion.dismissKey,
+                    ],
+                  },
+                }));
+                setDifficultySuggestion(null);
+              }}
+            >
+              <X size={19} />
+            </button>
+            <span className="eyebrow">{t.levelUpToastTitle}</span>
+            <h2 style={{ marginBottom: 8 }}>{t.difficultySuggestTitle}</h2>
+            <p className="subtle" style={{ marginBottom: 22 }}>
+              {t.difficultySuggestBody.replace(
+                '{level}',
+                difficultySuggestion.suggested === 'advanced' ? t.difficultyAdvanced : t.difficultyIntermediate,
+              )}
+            </p>
+            <button
+              className="primary-button full"
+              onClick={() => {
+                setData((d) => {
+                  const nextWorkoutDifficulty = { ...d.profile.workoutDifficulty };
+                  for (const id of difficultySuggestion.workoutIds) {
+                    if (difficultyRank(nextWorkoutDifficulty[id] ?? d.profile.difficulty ?? 'beginner') < difficultyRank(difficultySuggestion.suggested)) {
+                      nextWorkoutDifficulty[id] = difficultySuggestion.suggested;
+                    }
+                  }
+                  return { ...d, profile: { ...d.profile, workoutDifficulty: nextWorkoutDifficulty } };
+                });
+                setDifficultySuggestion(null);
+              }}
+            >
+              <Check size={16} /> {t.difficultySuggestAccept}
+            </button>
+            <button
+              className="ghost-button full"
+              style={{ marginTop: 10 }}
+              onClick={() => {
+                setData((d) => ({
+                  ...d,
+                  profile: {
+                    ...d.profile,
+                    dismissedDifficultySuggestions: [
+                      ...(d.profile.dismissedDifficultySuggestions ?? []),
+                      difficultySuggestion.dismissKey,
+                    ],
+                  },
+                }));
+                setDifficultySuggestion(null);
+              }}
+            >
+              {t.difficultySuggestDismiss}
+            </button>
           </div>
         </div>
       )}
@@ -864,7 +1015,7 @@ function OnboardingModal({
   );
 }
 
-function countCompletedWeeks(sessions: Session[], journal: JournalEntry[]): number {
+function countCompletedWeeks(sessions: Session[], journal: JournalEntry[], goalDays: number = DEFAULT_WEEKLY_GOAL): number {
   const kegelDates = new Set(
     sessions.filter((s) => s.type === 'kegel').map((s) => s.date),
   );
@@ -888,7 +1039,7 @@ function countCompletedWeeks(sessions: Session[], journal: JournalEntry[]): numb
     for (let d = new Date(wStart); d <= wEnd; d = new Date(d.getTime() + 86400000)) {
       if (kegelDates.has(d.toISOString().slice(0, 10))) count++;
     }
-    if (count >= 5) {
+    if (count >= goalDays) {
       const sundayKey = wEnd.toISOString().slice(0, 10);
       const sundayEntry = journal.find((j) => j.date === sundayKey);
       if (sundayEntry && (sundayEntry.control ?? 0) >= 3) weeks++;
@@ -896,6 +1047,19 @@ function countCompletedWeeks(sessions: Session[], journal: JournalEntry[]): numb
     cursor = new Date(cursor.getTime() + 7 * 86400000);
   }
   return weeks;
+}
+
+function countThisWeekDays(sessions: Session[]): number {
+  const kegelDates = new Set(sessions.filter((s) => s.type === 'kegel').map((s) => s.date));
+  const today = new Date(todayKey);
+  const day = today.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const weekStart = new Date(today.getFullYear(), today.getMonth(), today.getDate() + diff);
+  let count = 0;
+  for (let d = new Date(weekStart); d <= today; d = new Date(d.getTime() + 86400000)) {
+    if (kegelDates.has(d.toISOString().slice(0, 10))) count++;
+  }
+  return count;
 }
 
 function NavItem({
@@ -1306,6 +1470,44 @@ function WorkoutBreakdown({ sessions, t }: { sessions: Session[]; t: Dict }) {
   );
 }
 
+function SessionHistory({ sessions, t, lang }: { sessions: Session[]; t: Dict; lang: Lang }) {
+  const sorted = useMemo(
+    () => [...sessions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 20),
+    [sessions],
+  );
+
+  if (sorted.length === 0) {
+    return <p className="subtle" style={{ margin: '4px 0 24px' }}>{t.noSessionsYet}</p>;
+  }
+
+  return (
+    <div className="breakdown-list" style={{ marginBottom: 28 }}>
+      {sorted.map((s, i) => {
+        const id = s.workoutId || (s.type === 'kegel' ? 'kegel-normal' : 'breathing-calm');
+        const workout = getWorkoutById(id);
+        const dateLabel = new Date(s.date).toLocaleDateString(lang === 'pl' ? 'pl-PL' : 'en-US', {
+          day: 'numeric',
+          month: 'short',
+        });
+        return (
+          <div className="breakdown-row" key={`${s.date}-${i}`}>
+            <div className="breakdown-icon">
+              {workout ? workoutIcon(workout.icon, 16) : <Activity size={16} />}
+            </div>
+            <span className="breakdown-name">
+              {workout ? (t[workout.nameKey as keyof Dict] as string) : '—'}
+            </span>
+            <span className="breakdown-stat">
+              {dateLabel}
+              {s.minutes ? ` · ${s.minutes} ${t.minutes}` : ''}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function TrackCard({
   typeLabel,
   level,
@@ -1544,6 +1746,8 @@ function ProfileView({
   onOpenBackup,
   onOpenWorkout,
   onGoToLibrary,
+  onSetWeeklyGoal,
+  onToggleSound,
 }: {
   t: Dict;
   lang: Lang;
@@ -1558,6 +1762,8 @@ function ProfileView({
   onOpenBackup: () => void;
   onOpenWorkout: (id: string) => void;
   onGoToLibrary: () => void;
+  onSetWeeklyGoal: (days: number) => void;
+  onToggleSound: (enabled: boolean) => void;
 }) {
   const activeWorkouts = WORKOUTS.filter((w) => profile.selectedWorkouts.includes(w.id));
   const diffLabel: Record<Difficulty, string> = {
@@ -1566,6 +1772,8 @@ function ProfileView({
     advanced: t.difficultyAdvanced,
   };
   const monthly = useMemo(() => computeMonthly(sessions, lang), [sessions, lang]);
+  const weeklyGoalDays = profile.weeklyGoalDays ?? DEFAULT_WEEKLY_GOAL;
+  const thisWeekDays = useMemo(() => countThisWeekDays(sessions), [sessions]);
 
   return (
     <div className="page animate-in">
@@ -1594,6 +1802,31 @@ function ProfileView({
           <Sparkles size={18} />
           <strong>{Math.max(kegelLevel, breathLevel)}</strong>
           <span>{t.overallLevel}</span>
+        </div>
+      </div>
+
+      <div className="section-heading" style={{ marginTop: 8 }}>
+        <h3>{t.weeklyGoalTitle}</h3>
+      </div>
+      <div className="sunday-box" style={{ marginBottom: 28 }}>
+        <div className="sunday-icon">
+          <Flame size={17} />
+        </div>
+        <div>
+          <span className="eyebrow">{t.thisWeek}</span>
+          <h4>
+            {thisWeekDays} / {weeklyGoalDays} {t.daysUnit}
+          </h4>
+          <p>{t.weeklyGoalDesc}</p>
+        </div>
+        <div className="score-control">
+          <button onClick={() => onSetWeeklyGoal(Math.max(1, weeklyGoalDays - 1))}>
+            <Minus size={15} />
+          </button>
+          <strong>{weeklyGoalDays}</strong>
+          <button onClick={() => onSetWeeklyGoal(Math.min(7, weeklyGoalDays + 1))}>
+            <Plus size={15} />
+          </button>
         </div>
       </div>
 
@@ -1677,6 +1910,27 @@ function ProfileView({
           ))}
         </div>
       )}
+
+      <div className="section-heading">
+        <h3>{t.sessionHistoryTitle}</h3>
+      </div>
+      <SessionHistory sessions={sessions} t={t} lang={lang} />
+
+      <div className="section-heading">
+        <h3>{t.preferencesTitle}</h3>
+      </div>
+      <button
+        className="ghost-button full"
+        style={{ marginBottom: 28, justifyContent: 'space-between' }}
+        onClick={() => onToggleSound(!profile.soundEnabled)}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Volume2 size={16} /> {t.soundToggleLabel}
+        </span>
+        <span style={{ color: profile.soundEnabled ? 'var(--accent-teal-text)' : 'var(--text-tertiary)' }}>
+          {profile.soundEnabled ? t.on : t.off}
+        </span>
+      </button>
 
       <div className="section-heading">
         <h3>{t.backupTitle}</h3>
@@ -1892,12 +2146,14 @@ function KegelModal({
   t,
   difficultyNormal,
   difficultyReverse,
+  soundEnabled,
   onClose,
   onFinish,
 }: {
   t: Dict;
   difficultyNormal: Difficulty;
   difficultyReverse: Difficulty;
+  soundEnabled: boolean;
   onClose: () => void;
   onFinish: (mode: KegelMode) => void;
 }) {
@@ -1918,15 +2174,19 @@ function KegelModal({
         if (next >= TOTAL_SECONDS) {
           window.clearInterval(interval);
           vibrate([40, 50, 40]);
+          if (soundEnabled) playTone(880, 220);
           setStage('done');
           return TOTAL_SECONDS;
         }
-        if (next % PHASE_LEN === 0) vibrate(30);
+        if (next % PHASE_LEN === 0) {
+          vibrate(30);
+          if (soundEnabled) playTone(440, 90);
+        }
         return next;
       });
     }, 1000);
     return () => window.clearInterval(interval);
-  }, [stage, PHASE_LEN, TOTAL_SECONDS]);
+  }, [stage, PHASE_LEN, TOTAL_SECONDS, soundEnabled]);
 
   const rep = Math.floor(elapsed / (PHASE_LEN * 2));
   const within = elapsed % (PHASE_LEN * 2);
@@ -2062,11 +2322,13 @@ function KegelModal({
 function BoxBreathingModal({
   t,
   difficulty,
+  soundEnabled,
   onClose,
   onFinish,
 }: {
   t: Dict;
   difficulty: Difficulty;
+  soundEnabled: boolean;
   onClose: () => void;
   onFinish: (minutes: number) => void;
 }) {
@@ -2105,12 +2367,18 @@ function BoxBreathingModal({
   }
 
   useEffect(() => {
-    if (started && seconds > 0 && seconds % PHASE === 0) vibrate(20);
-  }, [started, seconds, PHASE]);
+    if (started && seconds > 0 && seconds % PHASE === 0) {
+      vibrate(20);
+      if (soundEnabled) playTone(440, 90);
+    }
+  }, [started, seconds, PHASE, soundEnabled]);
 
   useEffect(() => {
-    if (isDone) vibrate([40, 50, 40]);
-  }, [isDone]);
+    if (isDone) {
+      vibrate([40, 50, 40]);
+      if (soundEnabled) playTone(880, 220);
+    }
+  }, [isDone, soundEnabled]);
 
   const phaseLabel =
     phase === 'inhale' ? t.fourSevenEightInhale :
@@ -2119,7 +2387,7 @@ function BoxBreathingModal({
   const circleClass = phase === 'exhale' ? 'exhale' : phase === 'inhale' ? 'inhale' : '';
 
   return (
-    <div className="modal-backdrop">
+    <div className={`modal-backdrop ${started && !isDone ? 'focus-mode' : ''}`}>
       <div className="breath-modal">
         <button className="close-button" onClick={onClose}>
           <X size={19} />
@@ -2167,11 +2435,13 @@ function BoxBreathingModal({
 function FourSevenEightModal({
   t,
   difficulty,
+  soundEnabled,
   onClose,
   onFinish,
 }: {
   t: Dict;
   difficulty: Difficulty;
+  soundEnabled: boolean;
   onClose: () => void;
   onFinish: (minutes: number) => void;
 }) {
@@ -2211,18 +2481,22 @@ function FourSevenEightModal({
   useEffect(() => {
     if (started && seconds > 0 && (seconds % CYCLE_LEN === 0 || seconds % CYCLE_LEN === INHALE || seconds % CYCLE_LEN === INHALE + HOLD)) {
       vibrate(25);
+      if (soundEnabled) playTone(440, 90);
     }
-  }, [started, seconds, CYCLE_LEN, INHALE, HOLD]);
+  }, [started, seconds, CYCLE_LEN, INHALE, HOLD, soundEnabled]);
 
   useEffect(() => {
-    if (isDone) vibrate([40, 50, 40]);
-  }, [isDone]);
+    if (isDone) {
+      vibrate([40, 50, 40]);
+      if (soundEnabled) playTone(880, 220);
+    }
+  }, [isDone, soundEnabled]);
 
   const phaseLabel = phase === 'inhale' ? t.fourSevenEightInhale : phase === 'hold' ? t.fourSevenEightHold : t.fourSevenEightExhale;
   const circleClass = phase === 'exhale' ? 'exhale' : phase === 'inhale' ? 'inhale' : '';
 
   return (
-    <div className="modal-backdrop">
+    <div className={`modal-backdrop ${started && !isDone ? 'focus-mode' : ''}`}>
       <div className="breath-modal">
         <button className="close-button" onClick={onClose}>
           <X size={19} />
@@ -2270,11 +2544,13 @@ function FourSevenEightModal({
 function BreathingModal({
   t,
   difficulty,
+  soundEnabled,
   onClose,
   onFinish,
 }: {
   t: Dict;
   difficulty: Difficulty;
+  soundEnabled: boolean;
   onClose: () => void;
   onFinish: (minutes: number) => void;
 }) {
@@ -2297,11 +2573,21 @@ function BreathingModal({
   const ss = remaining % 60;
 
   useEffect(() => {
-    if (started && seconds > 0 && seconds % 10 === 0) vibrate(20);
-  }, [started, seconds]);
+    if (started && seconds > 0 && seconds % 10 === 0) {
+      vibrate(20);
+      if (soundEnabled) playTone(440, 90);
+    }
+  }, [started, seconds, soundEnabled]);
+
+  useEffect(() => {
+    if (isDone) {
+      vibrate([40, 50, 40]);
+      if (soundEnabled) playTone(880, 220);
+    }
+  }, [isDone, soundEnabled]);
 
   return (
-    <div className="modal-backdrop">
+    <div className={`modal-backdrop ${started && !isDone ? 'focus-mode' : ''}`}>
       <div className="breath-modal">
         <button className="close-button" onClick={onClose}>
           <X size={19} />
@@ -2311,7 +2597,7 @@ function BreathingModal({
             <span className="eyebrow">{t.breathSession}</span>
             <h2>{t.chooseRhythm}</h2>
             <p className="subtle">{t.leadBreath}</p>
-            <div className="duration-options">
+            <div className="duration-options" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
               <button
                 className={minutes === 2 ? 'selected' : ''}
                 onClick={() => setMinutes(2)}
@@ -2319,6 +2605,14 @@ function BreathingModal({
                 <strong>2</strong>
                 <span>{t.minutes}</span>
                 <small>{t.quickReset}</small>
+              </button>
+              <button
+                className={minutes === 3 ? 'selected' : ''}
+                onClick={() => setMinutes(3)}
+              >
+                <strong>3</strong>
+                <span>{t.minutes}</span>
+                <small>{t.difficultyIntermediate}</small>
               </button>
               <button
                 className={minutes === 5 ? 'selected' : ''}
@@ -2369,7 +2663,15 @@ function BreathingModal({
 
 const GROUNDING_BREATH_SECONDS = 30;
 
-function GroundingModal({ t, onClose }: { t: Dict; onClose: () => void }) {
+function GroundingModal({
+  t,
+  soundEnabled,
+  onClose,
+}: {
+  t: Dict;
+  soundEnabled: boolean;
+  onClose: () => void;
+}) {
   const [phase, setPhase] = useState<'breath' | 'steps'>('breath');
   const [breathSeconds, setBreathSeconds] = useState(0);
   const [step, setStep] = useState(0);
@@ -2389,8 +2691,11 @@ function GroundingModal({ t, onClose }: { t: Dict; onClose: () => void }) {
   }, [breathSeconds, phase]);
 
   useEffect(() => {
-    if (phase === 'breath' && breathSeconds > 0 && breathSeconds % 10 === 0) vibrate(20);
-  }, [phase, breathSeconds]);
+    if (phase === 'breath' && breathSeconds > 0 && breathSeconds % 10 === 0) {
+      vibrate(20);
+      if (soundEnabled) playTone(440, 90);
+    }
+  }, [phase, breathSeconds, soundEnabled]);
 
   useEffect(() => {
     if (step > 0) vibrate(25);
@@ -2400,7 +2705,7 @@ function GroundingModal({ t, onClose }: { t: Dict; onClose: () => void }) {
   const breathPhaseSeconds = breathSeconds % 10 < 4 ? 4 - (breathSeconds % 10) : 10 - (breathSeconds % 10);
 
   return (
-    <div className="modal-backdrop">
+    <div className={`modal-backdrop ${phase === 'breath' ? 'focus-mode' : ''}`}>
       <div className="breath-modal">
         <button className="close-button" onClick={onClose}>
           <X size={19} />

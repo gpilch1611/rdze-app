@@ -328,8 +328,8 @@ button { cursor: pointer; }
 .grounding-step strong { font: 700 18px Manrope; color: var(--text-primary); }
 .primary-button:disabled { opacity: .4; cursor: default; transform: none; }
 .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
-.modal-actions .ghost-button { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border: 1px solid var(--border-teal); border-radius: 9px; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 600; transition: .2s; white-space: nowrap; }
-.modal-actions .ghost-button:hover { color: var(--text-primary); border-color: var(--border-hover); }
+.ghost-button { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 12px 16px; border: 1px solid var(--border-teal); border-radius: 9px; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 600; transition: .2s; white-space: nowrap; }
+.ghost-button:hover { color: var(--text-primary); border-color: var(--border-hover); }
 .breath-circle.ready-pulse { animation: readyPulse 2s ease-in-out infinite; }
 @keyframes readyPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 .journal-page { max-width: 700px; }
@@ -355,7 +355,11 @@ button { cursor: pointer; }
 .score-control strong { font: 700 16px Manrope; color: var(--accent-text); }
 .save-button { width: 100%; }
 .full { width: 100%; }
-.modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: var(--backdrop); backdrop-filter: blur(7px); }
+.modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: var(--backdrop); backdrop-filter: blur(7px); transition: background .5s ease; }
+.modal-backdrop.focus-mode { background: rgba(4, 5, 4, .94); backdrop-filter: blur(2px); }
+.modal-backdrop.focus-mode .breath-modal { background: transparent; border-color: transparent; box-shadow: none; transition: background .5s ease, border-color .5s ease; }
+.modal-backdrop.focus-mode .eyebrow { opacity: .3; transition: opacity .5s ease; }
+.modal-backdrop.focus-mode .breath-tip { opacity: .55; }
 .breath-modal { width: min(100%, 440px); position: relative; padding: 38px; border: 1px solid var(--border-teal); border-radius: 20px; background: var(--bg-modal); text-align: center; box-shadow: var(--shadow-modal); max-height: 88vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .close-button { position: absolute; right: 17px; top: 17px; display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid var(--border-teal); border-radius: 50%; color: var(--text-secondary); background: transparent; }
 .breath-modal h2 { font: 700 25px Manrope; letter-spacing: -.8px; margin: 10px 0 6px; color: var(--text-heading); }
