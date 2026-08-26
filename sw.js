@@ -64,10 +64,7 @@ self.addEventListener('fetch', (event) => {
 // przez uzytkownika jezyka appki, wiec teksty ponizej sa domyslnie po
 // polsku.
 const NOTIF_SLOTS = [
-  { slot: 'morning', hour: 7, minute: 0, text: 'Czas na trening' },
-  { slot: 'day', hour: 13, minute: 0, text: 'Masz 2 minuty? Szybki reset.' },
-  { slot: 'evening', hour: 20, minute: 0, text: 'Wieczorna sesja czeka' },
-  { slot: 'sunday', hour: 19, minute: 0, sundayOnly: true, text: 'Podsumowanie tygodnia gotowe' },
+  { slot: 'morning', hour: 8, minute: 0, text: 'Co dziś trenujesz? 👋' },
 ];
 const NOTIF_LOG_KEY = '/__notif-log';
 
@@ -96,7 +93,6 @@ async function checkAndFireNotifications() {
   const log = await getNotifLog();
   let changed = false;
   for (const slotDef of NOTIF_SLOTS) {
-    if (slotDef.sundayOnly && now.getDay() !== 0) continue;
     const scheduled = new Date(now);
     scheduled.setHours(slotDef.hour, slotDef.minute, 0, 0);
     const diffMin = (now.getTime() - scheduled.getTime()) / 60000;
